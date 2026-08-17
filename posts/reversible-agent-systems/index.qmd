@@ -2,7 +2,7 @@
 title: "Reversible Agent Systems"
 description: "Rollback, state, and guarantees in self-modifying agent runtimes."
 date: 2026-08-17
-author: "Your Name"
+author: "Chirag Sehra"
 categories:
   - Agents
   - Systems

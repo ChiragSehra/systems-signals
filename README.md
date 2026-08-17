@@ -1,6 +1,6 @@
 # Systems / Signals
 
-A Quarto-based personal technical writing site for long-form notes on AI systems, agent architectures, LLM infrastructure, distributed systems, software architecture, and developer tooling.
+A Quarto-based personal technical writing site by Chirag Sehra for long-form notes on AI systems, agent architectures, LLM infrastructure, distributed systems, software architecture, and developer tooling.
 
 The site is intentionally static and publication-oriented. Articles are Markdown/Quarto source files, the rendered site is deployed to GitHub Pages, and discussion happens through Giscus and GitHub Discussions.
 
@@ -74,7 +74,7 @@ draft: false
 
 Use one page title from frontmatter, then begin the body with `##` sections. Use fenced code blocks with a language, standard Quarto math syntax, Mermaid for simple diagrams, meaningful image alt text, Markdown tables, callouts, footnotes, and citations where they help the reader inspect the argument.
 
-Set `draft: true` while developing an article. Draft handling should be confirmed against the local Quarto version before publishing; the safest publication check is to run `quarto render` and inspect the listing before pushing.
+Set `draft: true` while developing an article. The safest publication check is to run `quarto render` and inspect the listing before pushing.
 
 ## Series
 
@@ -99,13 +99,13 @@ Quarto renders the citation and bibliography when the referenced key exists in `
 
 ## Giscus comments setup
 
-The site is configured for Giscus with placeholders in `_quarto.yml`. Before publishing comments:
+The site is configured for Giscus in `_quarto.yml`. Before publishing comments:
 
 1. Enable GitHub Discussions for the repository.
 2. Install and authorise the [Giscus GitHub App](https://github.com/apps/giscus).
 3. Create or choose the discussion category to use for article comments.
 4. Use [giscus.app](https://giscus.app/) to obtain the repository ID and category ID.
-5. Replace `your-username/your-repository`, `YOUR_REPOSITORY_ID`, and `YOUR_CATEGORY_ID` in `_quarto.yml`.
+5. Confirm the repository and category IDs in `_quarto.yml` match the values generated for this repository.
 6. Render locally and confirm the Discussion section appears at the bottom of an article.
 
 The mapping is `pathname`, which gives each article a stable discussion thread based on its URL path. Do not commit fabricated IDs.
@@ -119,7 +119,7 @@ One-time repository setup:
 1. Push this project to a GitHub repository with the default branch named `main`.
 2. In **Settings → Pages**, set the source to **GitHub Actions**.
 3. Push to `main` or run the workflow manually from the Actions tab.
-4. Replace the placeholder `site-url` and GitHub links in `_quarto.yml` with the real repository URL.
+4. Confirm the `site-url` and GitHub links in `_quarto.yml` match the live repository URL.
 
 No custom domain or secrets are required by the workflow. A custom domain can be added later through GitHub Pages settings and a `CNAME` file if needed.
 
@@ -131,4 +131,4 @@ Before publishing, run:
 quarto render
 ```
 
-Then inspect the homepage, writing listing, series page, both example articles, navigation, code blocks, equation, Mermaid diagram, citation, footnote, mobile layout, and Giscus placeholder configuration. Quarto is not installed in the current development environment yet, so the initial implementation must be rendered once Quarto is available.
+Then inspect the homepage, writing listing, series page, both example articles, navigation, code blocks, equation, Mermaid diagram, citation, footnote, mobile layout, and Giscus configuration.

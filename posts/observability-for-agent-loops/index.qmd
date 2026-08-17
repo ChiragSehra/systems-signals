@@ -2,7 +2,7 @@
 title: "Observability for Agent Loops"
 description: "A practical trace model for understanding what an agent decided, did, and learned."
 date: 2026-08-10
-author: "Your Name"
+author: "Chirag Sehra"
 categories:
   - Agents
   - Observability

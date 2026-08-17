@@ -17,4 +17,4 @@ Articles are written in Quarto Markdown and published as static HTML through Git
 
 ## Contact
 
-Replace this section with your preferred contact details and links when the site identity is ready.
+You can find more of my work on [GitHub](https://github.com/ChiragSehra).

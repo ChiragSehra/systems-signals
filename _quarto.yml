@@ -11,7 +11,7 @@ project:
 website:
   title: "Systems / Signals"
   description: "Long-form notes on AI systems, distributed software, and the machinery beneath the interface."
-  site-url: https://example.github.io/technical-writing-site
+  site-url: https://chiragsehra.github.io/systems-signals
   favicon: assets/favicon.svg
   navbar:
     background: "#f7f5ef"
@@ -27,7 +27,7 @@ website:
       - text: About
         href: about.qmd
       - icon: github
-        href: https://github.com/your-username/your-repository
+        href: https://github.com/ChiragSehra/systems-signals
         aria-label: GitHub repository
   page-footer:
     left: "© 2026 Systems / Signals"
@@ -35,7 +35,7 @@ website:
       - text: RSS
         href: writing.xml
       - text: GitHub
-        href: https://github.com/your-username/your-repository
+        href: https://github.com/ChiragSehra/systems-signals
 format:
   html:
     theme: [cosmo, styles.scss]
@@ -55,10 +55,10 @@ format:
     footnotes-hover: true
     comments:
       giscus:
-        repo: your-username/your-repository
-        repo-id: YOUR_REPOSITORY_ID
+        repo: ChiragSehra/systems-signals
+        repo-id: R_kgDOT7NE_g
         category: Announcements
-        category-id: YOUR_CATEGORY_ID
+        category-id: DIC_kwDOT7NE_s4DDkzb
         mapping: pathname
         reactions-enabled: true
         input-position: bottom
@@ -66,7 +66,7 @@ format:
         loading: lazy
 
 bibliography: references.bib
-author: "Your Name"
+author: "Chirag Sehra"
 date-format: "MMMM D, YYYY"
 execute:
   freeze: auto
