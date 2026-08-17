@@ -63,7 +63,7 @@ Start with frontmatter like this:
 title: "My New Article"
 description: "A concise description for listings and metadata."
 date: 2026-08-18
-author: "Your Name"
+author: "Chirag Sehra"
 categories:
   - Systems
 series: null
