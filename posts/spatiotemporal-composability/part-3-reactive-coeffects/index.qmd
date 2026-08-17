@@ -69,13 +69,13 @@ That is the intuition behind the paper's **reactive coeffects**.[@cordiverse2026
 
 The paper models the dependency environment as:
 
-\[
+$$
 \Sigma
 \coloneqq
 (k:K)\rightharpoonup \mathcal{V}_k
-\]
+$$
 
-Think of \(\Sigma\) as a typed partial table:
+Think of $\Sigma$ as a typed partial table:
 
 ```text
 key         value
@@ -97,11 +97,11 @@ A dependency specification can then be tested against the current environment.
 
 Conceptually:
 
-\[
+$$
 \sigma \models d
-\]
+$$
 
-means that state \(\sigma\) satisfies dependency specification \(d\).
+means that state $\sigma$ satisfies dependency specification $d$.
 
 For a basic list of required services, satisfaction means all required keys are currently resolvable.[@cordiverse2026]
 

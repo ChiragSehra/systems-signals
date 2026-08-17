@@ -7,14 +7,16 @@ comments: false
 
 ## Why this exists
 
-Systems are easiest to misunderstand when the interesting parts are hidden behind a polished interface. This site is a place to make the machinery explicit: the state transitions, trade-offs, failure modes, and small experiments that turn a claim into something another engineer can inspect.
+Most software writing begins after the interesting parts have been sanded off.
 
-The writing focuses on AI engineering, agent architectures, LLM infrastructure, distributed systems, software architecture, and developer tooling.
+The interface is polished. The diagram is symmetrical. The failure mode is described as “an edge case,” which is a charming way to say nobody planned for it.
+
+Systems / Signals exists to document the machinery underneath: state transitions, ownership, trade-offs, failure modes, and the small experiments that reveal whether an idea survives contact with reality.
+
+The subjects include AI engineering, agent architectures, LLM infrastructure, distributed systems, software architecture, and developer tooling. In other words: systems that become interesting precisely when they stop behaving like diagrams.
 
 ## How it is made
 
-Articles are written in Quarto Markdown and published as static HTML through GitHub Pages. Code, diagrams, equations, citations, and comments live close to the argument they support. There is no custom backend and no database to maintain.
+Articles are written in Quarto Markdown and published as static HTML through GitHub Pages.
 
-## Contact
-
-You can find more of my work on [GitHub](https://github.com/ChiragSehra).
+Code, diagrams, equations, citations, and comments live close to the argument they support. There is no custom backend, no database, and no mysterious service quietly accumulating operational debt. The system is intentionally boring. That is the point.

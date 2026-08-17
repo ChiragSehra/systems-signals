@@ -90,9 +90,9 @@ But identity changed.
 
 The paper introduces an **epoch** associated with the concrete resolved dependency configuration.[@cordiverse2026]
 
-For dependency specification \(d\), the intuition is:
+For dependency specification $d$, the intuition is:
 
-\[
+$$
 \epsilon_d(\sigma)
 =
 \langle
@@ -100,7 +100,7 @@ For dependency specification \(d\), the intuition is:
 \mid
 k \in d
 \rangle
-\]
+$$
 
 Think of it as a dependency fingerprint.
 

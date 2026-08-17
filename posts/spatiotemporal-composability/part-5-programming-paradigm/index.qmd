@@ -697,23 +697,23 @@ For composability, we want unwanted runtime history to disappear.
 
 For learning, we want useful epistemic history to survive.
 
-That means a self-improving runtime should probably not model its total state as a single undifferentiated \(\Gamma\).
+That means a self-improving runtime should probably not model its total state as a single undifferentiated $\Gamma$.
 
 A more useful engineering model is:
 
-\[
+$$
 S = (R, K, A)
-\]
+$$
 
 where:
 
-- \(R\) is **reversible runtime state**;
-- \(K\) is **durable knowledge or memory state**;
-- \(A\) is an **append-only audit/security history**.
+- $R$ is **reversible runtime state**;
+- $K$ is **durable knowledge or memory state**;
+- $A$ is an **append-only audit/security history**.
 
 These states intentionally have different lifecycle semantics.
 
-### Runtime state \(R\)
+### Runtime state $R$
 
 Examples:
 
@@ -729,7 +729,7 @@ child fiber
 
 These are exactly the kinds of things that should normally disappear when their owning component disappears.
 
-### Knowledge state \(K\)
+### Knowledge state $K$
 
 Examples:
 
@@ -743,7 +743,7 @@ confirmed environment fact
 
 These may need to survive component teardown.
 
-### Audit state \(A\)
+### Audit state $A$
 
 Examples:
 
@@ -803,11 +803,11 @@ We want something closer to:
 
 In symbols, if:
 
-\[
+$$
 S=(R,K,A)
-\]
+$$
 
-then two histories with the same final component composition may be expected to converge in \(R\), while differing in \(K\) and \(A\) when their authorised learning histories differ.
+then two histories with the same final component composition may be expected to converge in $R$, while differing in $K$ and $A$ when their authorised learning histories differ.
 
 This means a future formal model for a learning harness may need a theorem more like:
 
@@ -1429,9 +1429,9 @@ A self-learning, self-editing harness needs several distinct properties.
 
 For a managed reversible effect:
 
-\[
+$$
 rollback_R(e(R)) = R
-\]
+$$
 
 under the effect model's conditions.
 
@@ -1443,17 +1443,17 @@ This is the kind of property temporal composability is concerned with.
 
 Once an authorised learning transaction is committed:
 
-\[
+$$
 commit(K_t, l)=K_{t+1}
-\]
+$$
 
-then rolling back unrelated runtime state should not silently erase \(K_{t+1}\).
+then rolling back unrelated runtime state should not silently erase $K_{t+1}$.
 
 Conceptually:
 
-\[
+$$
 rollback_R(R',K_{t+1})=(R,K_{t+1})
-\]
+$$
 
 The learning survived because it has a different owner and lifecycle.
 
@@ -1483,15 +1483,15 @@ The security log should be append-only.
 
 If:
 
-\[
+$$
 A_t
-\]
+$$
 
-is the audit history at time \(t\), then later history should extend it:
+is the audit history at time $t$, then later history should extend it:
 
-\[
+$$
 A_t \preceq A_{t+1}
-\]
+$$
 
 A self-edit can add:
 
@@ -1510,7 +1510,7 @@ but should not be able to erase the fact that those events occurred.
 
 ## Guarantee 5: Causal quarantine
 
-If version \(v\) is revoked, knowledge derived exclusively from \(v\) should no longer influence future action unless independently revalidated.
+If version $v$ is revoked, knowledge derived exclusively from $v$ should no longer influence future action unless independently revalidated.
 
 That is stronger than persistence.
 

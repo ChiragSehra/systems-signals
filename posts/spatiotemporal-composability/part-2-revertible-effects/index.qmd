@@ -87,14 +87,14 @@ def register_tool(runtime, name, tool):
 
 The operation and recovery action are produced together.
 
-The paper formalises a revertible effect over context \(\Gamma\) with the shape:
+The paper formalises a revertible effect over context $\Gamma$ with the shape:
 
-\[
+$$
 \mathcal{E}_{\Gamma}
 \coloneqq
 \Gamma \rightarrow
 \Gamma \times (\Gamma \rightarrow \Gamma)
-\]
+$$
 
 An effect consumes a context state and returns:
 
@@ -103,15 +103,15 @@ An effect consumes a context state and returns:
 
 A strict effect requires that if:
 
-\[
+$$
 e(\gamma) = (\delta, g)
-\]
+$$
 
 then:
 
-\[
+$$
 g(\delta)=\gamma
-\]
+$$
 
 The inverse must actually recover the pre-effect state under the definition's assumptions.[@cordiverse2026]
 
@@ -219,11 +219,11 @@ This is LIFO behaviour.
 
 The intuition is the familiar inverse-composition law:
 
-\[
+$$
 (f \circ g)^{-1}
 =
 g^{-1} \circ f^{-1}
-\]
+$$
 
 The paper's effect composition carries recovery functions through composition so that inverses of atomic operations compose into a recovery path for the larger computation.[@cordiverse2026]
 

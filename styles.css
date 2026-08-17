@@ -50,6 +50,7 @@ body { background: var(--site-paper); color: var(--site-ink); font-family: var(-
 .navbar-nav .nav-link { font-size: .86rem; letter-spacing: .02em; }
 main.content, #quarto-content { max-width: 1360px; margin-inline: auto; }
 #quarto-content { padding-inline: clamp(1rem, 4vw, 3rem); }
+#quarto-content.page-layout-article { max-width: 1180px; }
 h1, h2, h3, h4 { font-family: var(--site-display); color: var(--site-ink); font-kerning: normal; letter-spacing: -.032em; }
 h1 { font-size: clamp(2.5rem, 5vw, 4.6rem); line-height: .98; }
 h2 { margin-top: 4.5rem; margin-bottom: 1.35rem; font-size: clamp(1.7rem, 3vw, 2.35rem); line-height: 1.12; }
@@ -58,14 +59,19 @@ p, li { line-height: 1.72; }
 .content > p { margin-block: 1.35rem; }
 a { color: var(--site-accent); text-underline-offset: .18em; }
 a:hover { color: var(--site-warm); }
-.home-intro { max-width: 840px; padding: clamp(4rem, 10vw, 8rem) 0 clamp(3rem, 7vw, 5rem); border-bottom: 1px solid var(--site-line); }
-.home-intro p:not(.eyebrow) { max-width: 660px; font-family: var(--site-display); font-size: clamp(1.2rem, 2.3vw, 1.65rem); line-height: 1.45; }
+.home-intro { max-width: 840px; padding: clamp(2.5rem, 5vw, 4.5rem) 0 clamp(3rem, 6vw, 5rem); border-bottom: 1px solid var(--site-line); }
+.home-intro p:not(.eyebrow) { max-width: 660px; font-family: var(--site-display); font-size: clamp(1.2rem, 2.3vw, 1.65rem); line-height: 1.45; margin: 0; }
+.home-intro .eyebrow { margin: 0 0 1.75rem; }
+.home-intro h1 { margin: 0 0 1.5rem; }
 .eyebrow { color: var(--site-warm); font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
-.home-actions { margin-top: 2rem; display: flex; align-items: center; gap: 1.3rem; flex-wrap: wrap; }
+.home-actions { margin-top: 1.75rem; display: flex; align-items: center; gap: 1.3rem; flex-wrap: wrap; }
+.home-actions p { margin: 0; }
 .btn-primary { background: var(--site-accent); color: var(--site-paper); padding: .72rem 1rem; text-decoration: none; font-size: .9rem; font-weight: 700; }
 .btn-primary:hover { background: var(--site-warm); color: var(--site-paper); }
 .text-link { font-size: .9rem; font-weight: 700; }
 main.content > h1, #quarto-content > .quarto-title-block { margin-top: clamp(3rem, 8vw, 6rem); }
+#title-block-header:has(+ .home-intro) { margin-bottom: 0; }
+#title-block-header:has(+ .home-intro) .quarto-title-meta { display: none; }
 .quarto-title-meta { color: var(--site-muted); }
 .quarto-listing { margin-top: 2rem; }
 .quarto-listing .listing-item { padding: 1.4rem 0; border-top: 1px solid var(--site-line); }
@@ -74,6 +80,7 @@ main.content > h1, #quarto-content > .quarto-title-block { margin-top: clamp(3re
 .quarto-listing .listing-date, .quarto-listing .listing-categories { color: var(--site-muted); font-size: .8rem; }
 .page-columns .content { max-width: 68ch; }
 .page-columns .content p, .page-columns .content li { font-size: 1.04rem; }
+#quarto-content.page-layout-article .content pre, #quarto-content.page-layout-article .content .sourceCode { box-sizing: border-box; max-width: 100%; overflow-x: auto; }
 pre.sourceCode { border: 1px solid var(--site-line); border-radius: 0; background: var(--site-paper-deep); padding: 1rem; }
 pre.sourceCode, div.sourceCode, code.sourceCode, code.sourceCode > span, code span { color: var(--code-text) !important; }
 pre.text, pre.text code, pre:not(.sourceCode) { background: var(--site-paper-deep) !important; color: var(--code-text) !important; }
