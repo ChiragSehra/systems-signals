@@ -43,7 +43,7 @@ The generated site is written to `_site/`. It is ignored by Git and should never
 ├── about.qmd                      # About page
 ├── posts/<slug>/index.qmd         # Individual articles
 ├── assets/                        # Shared assets such as the favicon
-├── styles.scss                    # Small site-specific styling layer
+├── styles.css                     # Small site-specific styling layer
 ├── references.bib                 # Bibliography database
 └── .github/workflows/publish.yml  # GitHub Pages deployment
 ```

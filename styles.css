@@ -1,0 +1,77 @@
+/* Small, removable layer over Quarto's theme. Keep reading width and rhythm
+   predictable; let Quarto handle structural accessibility behaviour. */
+
+:root {
+  --site-paper: #f7f5ef;
+  --site-paper-deep: #ece9df;
+  --site-ink: #18211f;
+  --site-muted: #5d6863;
+  --site-line: #d7d8cd;
+  --site-accent: #1d514b;
+  --site-warm: #b45f39;
+  --site-display: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --site-body: "Avenir Next", "Segoe UI", sans-serif;
+  --site-mono: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+body { background: var(--site-paper); color: var(--site-ink); font-family: var(--site-body); font-size: 1rem; letter-spacing: -.01em; }
+.navbar { border-bottom: 1px solid var(--site-line); box-shadow: none; padding-block: .65rem; }
+.navbar-brand { font-family: var(--site-display); font-weight: 700; letter-spacing: -.03em; }
+.navbar-nav .nav-link { font-size: .86rem; letter-spacing: .02em; }
+main.content, #quarto-content { max-width: 1180px; margin-inline: auto; }
+#quarto-content { padding-inline: clamp(1rem, 4vw, 3rem); }
+h1, h2, h3, h4 { font-family: var(--site-display); color: var(--site-ink); letter-spacing: -.045em; }
+h1 { font-size: clamp(2.5rem, 5vw, 4.6rem); line-height: .98; }
+h2 { margin-top: 3rem; font-size: clamp(1.7rem, 3vw, 2.35rem); }
+h3 { font-size: 1.45rem; }
+p, li { line-height: 1.78; }
+a { color: var(--site-accent); text-underline-offset: .18em; }
+a:hover { color: var(--site-warm); }
+.home-intro { max-width: 840px; padding: clamp(4rem, 10vw, 8rem) 0 clamp(3rem, 7vw, 5rem); border-bottom: 1px solid var(--site-line); }
+.home-intro p:not(.eyebrow) { max-width: 660px; font-family: var(--site-display); font-size: clamp(1.2rem, 2.3vw, 1.65rem); line-height: 1.45; }
+.eyebrow { color: var(--site-warm); font-size: .75rem; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+.home-actions { margin-top: 2rem; display: flex; align-items: center; gap: 1.3rem; flex-wrap: wrap; }
+.btn-primary { background: var(--site-accent); color: var(--site-paper); padding: .72rem 1rem; text-decoration: none; font-size: .9rem; font-weight: 700; }
+.btn-primary:hover { background: var(--site-warm); color: var(--site-paper); }
+.text-link { font-size: .9rem; font-weight: 700; }
+main.content > h1, #quarto-content > .quarto-title-block { margin-top: clamp(3rem, 8vw, 6rem); }
+.quarto-title-meta { color: var(--site-muted); }
+.quarto-listing { margin-top: 2rem; }
+.quarto-listing .listing-item { padding: 1.4rem 0; border-top: 1px solid var(--site-line); }
+.quarto-listing .listing-title { font-family: var(--site-display); font-size: 1.55rem; font-weight: 700; }
+.quarto-listing .listing-description { color: var(--site-muted); max-width: 700px; }
+.quarto-listing .listing-date, .quarto-listing .listing-categories { color: var(--site-muted); font-size: .8rem; }
+.page-columns .content { max-width: 760px; }
+.page-columns .content p, .page-columns .content li { font-size: 1.04rem; }
+pre.sourceCode { border: 1px solid var(--site-line); border-radius: 0; background: var(--site-paper-deep); padding: 1rem; }
+code { font-family: var(--site-mono); font-size: .88em; }
+blockquote { border-left: 3px solid var(--site-warm); color: var(--site-muted); font-family: var(--site-display); font-size: 1.2rem; padding-left: 1.2rem; }
+table { --bs-table-bg: transparent; border-color: var(--site-line); }
+th { font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; }
+.callout { border-radius: 0; border-left-width: 3px; background: color-mix(in srgb, var(--site-paper-deep) 65%, transparent); }
+.figure-caption { color: var(--site-muted); font-size: .84rem; }
+#TOC { font-size: .84rem; }
+#TOC .nav-link.active { color: var(--site-warm); border-left-color: var(--site-warm); }
+footer { border-top: 1px solid var(--site-line); margin-top: 5rem; color: var(--site-muted); font-size: .8rem; }
+
+@media (max-width: 991px) {
+  .page-columns .content { max-width: none; }
+  #TOC { position: static; margin-bottom: 2rem; }
+}
+@media (max-width: 575px) {
+  #quarto-content { padding-inline: 1rem; }
+  .page-columns, .page-columns > *, .page-columns .content, main.content { width: 100%; max-width: 100%; min-width: 0; }
+  .page-columns { display: block; }
+  .content { overflow-wrap: anywhere; }
+  h1 { font-size: 2.65rem; }
+  .home-intro { padding-top: 3.5rem; }
+  .page-columns .content p, .page-columns .content li { font-size: 1rem; }
+  .table-responsive { overflow-x: auto; }
+  pre.sourceCode { max-width: calc(100vw - 2rem); overflow-x: auto; }
+  .quarto-listing .listing-title { font-size: 1.3rem; }
+}
+@media (prefers-color-scheme: dark) {
+  :root { --site-paper: #17201e; --site-paper-deep: #202b28; --site-ink: #e8e9df; --site-muted: #aeb8b1; --site-line: #3b4944; --site-accent: #8bc0a9; --site-warm: #e29a70; }
+  .navbar { background: var(--site-paper) !important; }
+  .btn-primary, .btn-primary:hover { color: #17201e; }
+}
