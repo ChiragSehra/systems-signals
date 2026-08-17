@@ -1,0 +1,72 @@
+project:
+  type: website
+  output-dir: _site
+  render:
+    - index.qmd
+    - writing.qmd
+    - series.qmd
+    - about.qmd
+    - posts/
+
+website:
+  title: "Systems / Signals"
+  description: "Long-form notes on AI systems, distributed software, and the machinery beneath the interface."
+  site-url: https://example.github.io/technical-writing-site
+  favicon: assets/favicon.svg
+  navbar:
+    background: "#f7f5ef"
+    foreground: "#18211f"
+    left:
+      - text: "Systems / Signals"
+        href: index.qmd
+    right:
+      - text: Writing
+        href: writing.qmd
+      - text: Series
+        href: series.qmd
+      - text: About
+        href: about.qmd
+      - icon: github
+        href: https://github.com/your-username/your-repository
+        aria-label: GitHub repository
+  page-footer:
+    left: "© 2026 Systems / Signals"
+    right:
+      - text: RSS
+        href: writing.xml
+      - text: GitHub
+        href: https://github.com/your-username/your-repository
+format:
+  html:
+    theme: [cosmo, styles.scss]
+    toc: true
+    toc-depth: 3
+    toc-title: "On this page"
+    number-sections: false
+    code-copy: true
+    code-overflow: scroll
+    code-line-numbers: false
+    html-math-method: katex
+    fig-align: center
+    fig-responsive: true
+    link-external-newwindow: true
+    anchor-sections: true
+    citations-hover: true
+    footnotes-hover: true
+    comments:
+      giscus:
+        repo: your-username/your-repository
+        repo-id: YOUR_REPOSITORY_ID
+        category: Announcements
+        category-id: YOUR_CATEGORY_ID
+        mapping: pathname
+        reactions-enabled: true
+        input-position: bottom
+        theme: preferred_color_scheme
+        loading: lazy
+
+bibliography: references.bib
+author: "Your Name"
+date-format: "MMMM D, YYYY"
+execute:
+  freeze: auto

@@ -1,0 +1,41 @@
+---
+title: "Systems / Signals"
+description: "Long-form notes on AI systems, distributed software, and the machinery beneath the interface."
+page-layout: full
+comments: false
+listing:
+  contents: posts
+  type: default
+  sort: "date desc"
+  max-items: 3
+  fields: [title, description, date, categories]
+  page-size: 3
+---
+
+<div class="home-intro">
+
+<p class="eyebrow">Technical writing · systems thinking · field notes</p>
+
+# Building things that remain understandable
+
+This is a working notebook for the hard parts of software: state, coordination, failure, feedback, and the design choices that only become visible when systems meet reality.
+
+<div class="home-actions">
+
+[Read the latest writing](writing.qmd){.btn-primary} [About this site](about.qmd){.text-link}
+
+</div>
+
+</div>
+
+## Recent writing
+
+## A small index
+
+| Area | What you will find |
+|:--|:--|
+| **AI systems** | Agent runtimes, memory, evaluation, and the boundary between model behavior and software behavior. |
+| **Distributed systems** | Coordination, failure modes, data movement, and the cost of making state observable. |
+| **Engineering practice** | The tools, constraints, and habits that make complex work easier to reason about. |
+
+Browse the full [writing index](writing.qmd) or follow a [series](series.qmd) from the beginning.

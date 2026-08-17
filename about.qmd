@@ -1,0 +1,20 @@
+---
+title: "About"
+description: "Why this site exists and how it is made."
+page-layout: full
+comments: false
+---
+
+## Why this exists
+
+Systems are easiest to misunderstand when the interesting parts are hidden behind a polished interface. This site is a place to make the machinery explicit: the state transitions, trade-offs, failure modes, and small experiments that turn a claim into something another engineer can inspect.
+
+The writing focuses on AI engineering, agent architectures, LLM infrastructure, distributed systems, software architecture, and developer tooling.
+
+## How it is made
+
+Articles are written in Quarto Markdown and published as static HTML through GitHub Pages. Code, diagrams, equations, citations, and comments live close to the argument they support. There is no custom backend and no database to maintain.
+
+## Contact
+
+Replace this section with your preferred contact details and links when the site identity is ready.
