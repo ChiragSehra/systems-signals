@@ -3,13 +3,6 @@ title: "Systems / Signals"
 description: "Long-form notes on AI systems, distributed software, and the machinery beneath the interface."
 page-layout: full
 comments: false
-listing:
-  contents: posts
-  type: default
-  sort: "date desc"
-  max-items: 3
-  fields: [title, description, date, categories]
-  page-size: 3
 ---
 
 <div class="home-intro">
@@ -29,6 +22,8 @@ This is a working notebook for the hard parts of software: state, coordination, 
 </div>
 
 ## Recent writing
+
+No articles published yet. Add your first piece under `posts/<slug>/index.qmd` and it will appear in the writing index automatically.
 
 ## A small index
 

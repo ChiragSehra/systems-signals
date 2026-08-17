@@ -1,14 +1,10 @@
 ---
 title: "Writing"
 description: "All published notes, essays, and technical deep dives."
-listing:
-  contents: posts
-  type: default
-  sort: "date desc"
-  fields: [title, description, date, categories]
-  feed: true
 page-layout: full
 comments: false
 ---
 
-The complete index of essays and field notes. New pieces appear here first; series can also be read from the [series index](series.qmd).
+No articles published yet. Create a new article under `posts/<slug>/index.qmd`; Quarto will add it to this page after the next render.
+
+When articles exist, this page can be switched back to a generated listing and RSS feed.
