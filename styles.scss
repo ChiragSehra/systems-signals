@@ -73,6 +73,9 @@ footer { border-top: 1px solid var(--site-line); margin-top: 5rem; color: var(--
 }
 @media (max-width: 575px) {
   #quarto-content { padding-inline: 1rem; }
+  .page-columns, .page-columns > *, .page-columns .content, main.content { width: 100%; max-width: 100%; min-width: 0; }
+  .page-columns { display: block; }
+  .content { overflow-wrap: anywhere; }
   h1 { font-size: 2.65rem; }
   .home-intro { padding-top: 3.5rem; }
   .page-columns .content p, .page-columns .content li { font-size: 1rem; }
