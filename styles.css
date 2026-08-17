@@ -50,6 +50,7 @@ table { --bs-table-bg: transparent; border-color: var(--site-line); }
 th { font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; }
 .callout { border-radius: 0; border-left-width: 3px; background: color-mix(in srgb, var(--site-paper-deep) 65%, transparent); }
 .figure-caption { color: var(--site-muted); font-size: .84rem; }
+span.math.display { display: block; max-width: 100%; overflow-x: auto; overflow-y: hidden; padding-block: .25rem; }
 #TOC { font-size: .84rem; }
 #TOC .nav-link.active { color: var(--site-warm); border-left-color: var(--site-warm); }
 footer { border-top: 1px solid var(--site-line); margin-top: 5rem; color: var(--site-muted); font-size: .8rem; }
