@@ -1,0 +1,566 @@
+---
+title: "Async Reloads, Epochs and the Race You Probably Missed"
+description: "Why asynchronous reloads create coherence races and how dependency epochs contain them."
+date: 2026-08-17
+author: "Chirag Sehra"
+categories:
+  - Agents
+  - Systems
+  - Distributed Systems
+series: "Spatiotemporal Composability"
+series_order: 4
+draft: false
+---
+
+## `await` Changes the Problem
+
+Suppose an MCP plugin starts like this:
+
+```python
+async def start_mcp(ctx):
+    transport = ctx.services["mcp_transport"]
+
+    connection = await transport.connect()
+
+    tools = await connection.list_tools()
+
+    ctx.services["tools"].register_many(tools)
+```
+
+Look at the two `await` points.
+
+At the beginning:
+
+```text
+mcp_transport = server A
+```
+
+During:
+
+```python
+await transport.connect()
+```
+
+the configuration changes.
+
+Now:
+
+```text
+mcp_transport = server B
+```
+
+But the coroutine still holds:
+
+```python
+transport = server_A
+```
+
+It eventually registers tools discovered from A into a runtime whose current provider is B.
+
+We have produced:
+
+```text
+current configuration: server B
+
+installed tools:       server A
+```
+
+The component may appear active, but it is active against the wrong dependency world.
+
+---
+
+## This Is a Coherence Problem
+
+Our simple state machine saw only:
+
+```text
+before: requirements satisfied
+after:  requirements satisfied
+```
+
+So:
+
+```text
+ACTIVE → ACTIVE
+```
+
+looks fine.
+
+But identity changed.
+
+The paper introduces an **epoch** associated with the concrete resolved dependency configuration.[@cordiverse2026]
+
+For dependency specification \(d\), the intuition is:
+
+\[
+\epsilon_d(\sigma)
+=
+\langle
+\sigma(k)
+\mid
+k \in d
+\rangle
+\]
+
+Think of it as a dependency fingerprint.
+
+---
+
+## Worked Example: Dependency Epochs
+
+Our component requires:
+
+```python
+requires = {
+    "llm",
+    "tools",
+}
+```
+
+Suppose the runtime resolves:
+
+```text
+llm   → DeepSeekProvider instance #17
+tools → ToolRegistry instance #5
+```
+
+Conceptually, an epoch could identify:
+
+```python
+(
+    id(llm_provider_17),
+    id(tool_registry_5),
+)
+```
+
+Call that:
+
+```text
+Epoch 41
+```
+
+The component starts loading against Epoch 41.
+
+Now the LLM changes:
+
+```text
+llm → DeepSeekProvider instance #18
+```
+
+The dependency set remains satisfied.
+
+But the epoch becomes:
+
+```text
+Epoch 42
+```
+
+The runtime now knows:
+
+> The component's target configuration changed even though all dependency keys remain present.
+
+---
+
+## Add Epochs to Our Python Runtime
+
+```python
+class Component:
+    def compute_epoch(self, runtime):
+        if not self.satisfied(runtime):
+            return None
+
+        return tuple(
+            id(runtime.services[name])
+            for name in sorted(self.requires)
+        )
+```
+
+A Boolean tells us:
+
+```text
+ready / not ready
+```
+
+An epoch tells us:
+
+```text
+ready against exactly this dependency resolution
+```
+
+That is a stronger statement.
+
+---
+
+## Why a Boolean Is Not Enough
+
+These all collapse to `True`:
+
+```text
+{llm=A, tools=X}
+{llm=B, tools=X}
+{llm=C, tools=Y}
+```
+
+An epoch distinguishes them:
+
+```text
+{llm=A, tools=X} → epoch 1
+{llm=B, tools=X} → epoch 2
+{llm=C, tools=Y} → epoch 3
+```
+
+A component is not merely:
+
+```text
+ACTIVE
+```
+
+It is:
+
+```text
+ACTIVE against configuration N
+```
+
+That distinction is what lets the runtime reason about stale bindings.
+
+DeepSeek Harness's current client HMR documentation explicitly notes that dependent reloads are driven through Cordis using service-provider identities in a fiber's activation epoch.[@deepseekHmr2026]
+
+---
+
+## Worked Example: The MCP Race
+
+```{mermaid}
+sequenceDiagram
+  participant Old as Old transition
+  participant Runtime
+  participant New as New configuration
+  Old->>Runtime: start against Epoch 7 / MCP_A
+  New->>Runtime: MCP_A removed, MCP_B installed
+  Runtime-->>New: publish Epoch 8
+  Old->>Runtime: resume after await
+  Runtime-->>Old: epoch mismatch: abort and unwind
+  Runtime->>New: restart against Epoch 8 / MCP_B
+```
+
+Start:
+
+```text
+Epoch 7
+
+transport = MCP_A
+tools     = registry_1
+```
+
+Component begins:
+
+```python
+connection = await MCP_A.connect()
+```
+
+While waiting:
+
+```text
+MCP_A removed
+MCP_B installed
+```
+
+Now:
+
+```text
+Epoch 8
+
+transport = MCP_B
+tools     = registry_1
+```
+
+When the old transition resumes, it should not blindly publish work derived from Epoch 7 into Epoch 8.
+
+A simplified policy is:
+
+```python
+if current_epoch != starting_epoch:
+    abort_old_transition()
+```
+
+Then:
+
+```text
+abort old transition
+        │
+        ▼
+undo partial managed effects
+        │
+        ▼
+reload against latest epoch
+```
+
+---
+
+## Effects Need Interruption Boundaries Too
+
+Suppose startup performs:
+
+```python
+async def load():
+    register_prompt()
+    await connect()
+    register_tools()
+    await warm_cache()
+    register_handlers()
+```
+
+The epoch changes during:
+
+```python
+await warm_cache()
+```
+
+What should be undone?
+
+Only operations that have actually completed:
+
+```text
+register_prompt ✓
+connect         ✓
+register_tools  ✓
+
+warm_cache      incomplete
+handlers        not started
+```
+
+Recovery should undo completed managed effects in reverse order.
+
+This is why lifecycle machinery often needs incremental transition boundaries rather than one monolithic `load()` callback.
+
+---
+
+## A More Realistic Python Sketch
+
+```python
+class Transition:
+    def __init__(self):
+        self.undo = []
+
+    async def step(self, operation, epoch_ok):
+        if not epoch_ok():
+            raise EpochChanged()
+
+        undo = await operation()
+        self.undo.append(undo)
+
+        if not epoch_ok():
+            raise EpochChanged()
+
+    async def rollback(self):
+        while self.undo:
+            undo = self.undo.pop()
+            result = undo()
+
+            if hasattr(result, "__await__"):
+                await result
+```
+
+Plugin startup:
+
+```python
+async def start_mcp(runtime, component, epoch):
+    tx = Transition()
+
+    def valid():
+        return component.compute_epoch(runtime) == epoch
+
+    try:
+        await tx.step(connect_transport, valid)
+        await tx.step(register_tools, valid)
+        await tx.step(register_prompts, valid)
+
+    except EpochChanged:
+        await tx.rollback()
+        raise
+```
+
+Again, this is not Cordis.
+
+It exposes the race that the more complete lifecycle model must handle.
+
+---
+
+## Inertia: Do Not Race Reload Against Unload
+
+Consider rapidly changing configuration:
+
+```text
+t0  provider A exists
+t1  provider disappears
+t2  provider B appears
+t3  provider B disappears
+t4  provider C appears
+```
+
+while startup itself takes two seconds.
+
+A naïve system might concurrently spawn:
+
+```text
+reload A
+unload
+reload B
+unload
+reload C
+```
+
+Now lifecycle transitions race with one another.
+
+A stronger design serialises state migration: while a transition is in progress, newer desired states are remembered and reconciled after the current transition reaches a safe boundary.
+
+Conceptually:
+
+```text
+target changes
+     │
+     ▼
+RELOAD starts
+     │
+     │ target changes again
+     │
+     ▼
+RELOAD finishes
+     │
+     ▼
+Is target still current?
+     │
+   no
+     │
+     ▼
+reconcile toward latest target
+```
+
+Not:
+
+```text
+reload ──────┐
+unload ──────┼── uncontrolled race
+reload ──────┘
+```
+
+---
+
+## OS Analogy 1: Device Lifecycle Transitions
+
+Kernel device lifecycle operations are not instantaneous. Probe, suspend, resume, bind and unbind can have ordering and concurrency constraints.[@linuxDeviceLinks]
+
+The general OS lesson is:
+
+> A lifecycle transition has duration and needs coordination.
+
+You cannot always model:
+
+```text
+OLD → NEW
+```
+
+as a single assignment.
+
+Real systems look like:
+
+```text
+OLD
+ │
+ ▼
+TRANSITIONING
+ │
+ ▼
+NEW
+```
+
+Cordis brings similar concerns into component composition.
+
+---
+
+## OS Analogy 2: TOCTOU
+
+There is also a resemblance to a time-of-check/time-of-use problem.
+
+A program observes:
+
+```text
+resource = X
+```
+
+then time passes.
+
+Later it uses X.
+
+The world may have changed between observation and use.
+
+Our component does:
+
+```python
+llm = resolve("llm")
+await initialise()
+use(llm)
+```
+
+The lookup was correct when performed.
+
+That does not mean the dependency configuration is still current when startup commits.
+
+An epoch provides a versioned answer to:
+
+```text
+I started against configuration N.
+
+Am I still completing against configuration N?
+```
+
+The analogy is useful, but an epoch in Cordis is a lifecycle/dependency mechanism rather than a generic TOCTOU primitive.
+
+---
+
+## HMR Is Less Magical Once We See the Lifecycle
+
+Once we have:
+
+```text
+revertible managed effects
++
+dependency re-resolution
++
+epoch-aware component lifetimes
+```
+
+hot module replacement becomes easier to reason about.
+
+Conceptually:
+
+```text
+Plugin v1
+   │
+   ▼
+remove v1 contribution
+   │
+   ▼
+resolve current dependencies
+   │
+   ▼
+Plugin v2
+```
+
+rather than:
+
+```text
+mutate a live module
+and hope every reference follows
+```
+
+This architecture still does **not** imply automatic recovery from every failed hot update.
+
+DeepSeek Harness's current client HMR README explicitly states a known limitation: **there is no failure rollback**; if a reload fails, the entry remains `FAILED` and the previous bundle is not automatically restored.[@deepseekHmr2026]
+
+That limitation becomes very important in the final security discussion.
+
+---
+
+[Previous: Reactive Coeffects — Dependencies That Control Component Lifetime](../part-3-reactive-coeffects/index.qmd) · [Next: From Clever Plugin Runtime to Programming Paradigm](../part-5-programming-paradigm/index.qmd)
+
+---

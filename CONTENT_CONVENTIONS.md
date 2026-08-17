@@ -6,7 +6,7 @@ Keep authoring predictable so articles remain portable, readable and easy to mai
 
 ## Article Location
 
-Create each article at:
+Create a standalone article at:
 
 ```text
 posts/<slug>/index.qmd
@@ -16,6 +16,12 @@ Example:
 
 ```text
 posts/reversible-agent-systems/index.qmd
+```
+
+For a series, use a series directory and one chapter directory per part:
+
+```text
+posts/spatiotemporal-composability/part-1-dynamic-ai-systems/index.qmd
 ```
 
 ## Frontmatter
@@ -155,7 +161,7 @@ series: "Agent Systems"
 series_order: 1
 ```
 
-Series pages should eventually support previous and next navigation.
+The Series page should provide reading order. Add previous/next links to each chapter when the series has multiple parts.
 
 ## Comments
 

@@ -6,7 +6,11 @@ project:
     - writing.qmd
     - series.qmd
     - about.qmd
-    - posts/
+    - posts/spatiotemporal-composability/part-1-dynamic-ai-systems/index.qmd
+    - posts/spatiotemporal-composability/part-2-revertible-effects/index.qmd
+    - posts/spatiotemporal-composability/part-3-reactive-coeffects/index.qmd
+    - posts/spatiotemporal-composability/part-4-async-reloads-and-epochs/index.qmd
+    - posts/spatiotemporal-composability/part-5-programming-paradigm/index.qmd
 
 website:
   title: "Systems / Signals"
@@ -14,11 +18,8 @@ website:
   site-url: https://chiragsehra.github.io/systems-signals
   favicon: assets/favicon.svg
   navbar:
-    background: "#f7f5ef"
-    foreground: "#18211f"
-    left:
-      - text: "Systems / Signals"
-        href: index.qmd
+    background: "#f4f0e8"
+    foreground: "#211e1a"
     right:
       - text: Writing
         href: writing.qmd
@@ -40,6 +41,7 @@ format:
   html:
     theme: cosmo
     css: styles.css
+    include-after-body: theme-toggle.html
     toc: true
     toc-depth: 3
     toc-title: "On this page"

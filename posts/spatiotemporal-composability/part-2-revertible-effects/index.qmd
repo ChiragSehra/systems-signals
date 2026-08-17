@@ -1,0 +1,528 @@
+---
+title: "Revertible Effects — Making Runtime Changes Undoable"
+description: "How effect scopes, inverse operations, and nested lifetimes make runtime changes recoverable."
+date: 2026-08-17
+author: "Chirag Sehra"
+categories:
+  - Agents
+  - Systems
+  - Distributed Systems
+series: "Spatiotemporal Composability"
+series_order: 2
+draft: false
+---
+
+## Cleanup Functions Solve Only Part of the Problem
+
+Our first instinct might be to modify the plugin interface:
+
+```python
+class SearchPlugin:
+    def load(self, runtime):
+        runtime.tools["web_search"] = self.search
+        runtime.hooks.append(self.on_event)
+
+    def unload(self, runtime):
+        del runtime.tools["web_search"]
+        runtime.hooks.remove(self.on_event)
+```
+
+This is better.
+
+But the forward operation exists here:
+
+```python
+runtime.tools["web_search"] = self.search
+```
+
+while the inverse exists somewhere else:
+
+```python
+del runtime.tools["web_search"]
+```
+
+Correctness now depends on two pieces of code remaining synchronised.
+
+Add one more effect:
+
+```python
+runtime.prompts["search"] = SEARCH_PROMPT
+```
+
+and forget to update `unload()`.
+
+You now have a leak.
+
+The paper's direction is different:
+
+> Make reversibility part of the effect itself.
+
+---
+
+## From Mutation to Mutation + Inverse
+
+Instead of:
+
+```python
+def register_tool(runtime, name, tool):
+    runtime.tools[name] = tool
+```
+
+imagine:
+
+```python
+def register_tool(runtime, name, tool):
+    previous = runtime.tools.get(name)
+
+    runtime.tools[name] = tool
+
+    def undo():
+        if previous is None:
+            del runtime.tools[name]
+        else:
+            runtime.tools[name] = previous
+
+    return undo
+```
+
+The operation and recovery action are produced together.
+
+The paper formalises a revertible effect over context \(\Gamma\) with the shape:
+
+\[
+\mathcal{E}_{\Gamma}
+\coloneqq
+\Gamma \rightarrow
+\Gamma \times (\Gamma \rightarrow \Gamma)
+\]
+
+An effect consumes a context state and returns:
+
+1. a new state; and
+2. a recovery transformation.
+
+A strict effect requires that if:
+
+\[
+e(\gamma) = (\delta, g)
+\]
+
+then:
+
+\[
+g(\delta)=\gamma
+\]
+
+The inverse must actually recover the pre-effect state under the definition's assumptions.[@cordiverse2026]
+
+---
+
+## Worked Example: Our First Effect Runtime
+
+```python
+class EffectScope:
+    def __init__(self):
+        self._undo = []
+
+    def effect(self, operation):
+        undo = operation()
+        self._undo.append(undo)
+        return undo
+
+    def dispose(self):
+        while self._undo:
+            undo = self._undo.pop()
+            undo()
+```
+
+Tool registration:
+
+```python
+def install_search(scope, runtime):
+
+    def add_tool():
+        runtime.tools["web_search"] = web_search
+
+        def undo():
+            del runtime.tools["web_search"]
+
+        return undo
+
+    scope.effect(add_tool)
+```
+
+Hook registration:
+
+```python
+def add_hook():
+    runtime.hooks.append(log_search_result)
+
+    def undo():
+        runtime.hooks.remove(log_search_result)
+
+    return undo
+
+scope.effect(add_hook)
+```
+
+Prompt registration:
+
+```python
+def add_prompt():
+    runtime.prompts["search"] = SEARCH_PROMPT
+
+    def undo():
+        del runtime.prompts["search"]
+
+    return undo
+
+scope.effect(add_prompt)
+```
+
+The plugin's lifetime now owns a ledger:
+
+```text
+EffectScope
+│
+├── undo(add_tool)
+├── undo(add_hook)
+└── undo(add_prompt)
+```
+
+DeepSeek Harness's own implementation has the same practical concern: teardown ordering must be explicit when mutable services change.
+
+---
+
+## Why Undo Happens in Reverse Order
+
+Suppose installation performs:
+
+```text
+1. register service
+2. register listener
+3. create child component
+```
+
+The child may depend on the listener.
+
+The listener may depend on the service.
+
+So teardown should normally be:
+
+```text
+3. remove child
+2. unregister listener
+1. unregister service
+```
+
+This is LIFO behaviour.
+
+The intuition is the familiar inverse-composition law:
+
+\[
+(f \circ g)^{-1}
+=
+g^{-1} \circ f^{-1}
+\]
+
+The paper's effect composition carries recovery functions through composition so that inverses of atomic operations compose into a recovery path for the larger computation.[@cordiverse2026]
+
+---
+
+## Nested Agent Effects
+
+Suppose installing our MCP plugin performs four managed operations:
+
+```python
+def install_mcp(scope, runtime):
+    register_connection(scope, runtime)
+    register_tools(scope, runtime)
+    register_prompt(scope, runtime)
+    register_event_handler(scope, runtime)
+```
+
+Its effect ledger becomes:
+
+```text
+MCP Scope
+
+undo connection
+undo tools
+undo prompt
+undo handler
+```
+
+Disposal executes in reverse:
+
+```text
+undo handler
+undo prompt
+undo tools
+undo connection
+```
+
+Now add another plugin:
+
+```text
+Search Scope
+
+undo search_tool
+undo search_prompt
+```
+
+Each component has a separate lifetime:
+
+```text
+MCP Component
+└── effect ledger
+
+Search Component
+└── effect ledger
+```
+
+This is much better than one application-wide cleanup stack.
+
+But a harder problem appears as soon as effects interleave.
+
+<div class="responsive-diagram" role="img" aria-label="Interleaved effects from components A and B. Removing A from a global stack would incorrectly remove B, while component-owned recovery removes only A's effects.">
+<svg viewBox="0 0 820 360" xmlns="http://www.w3.org/2000/svg" aria-labelledby="part-two-interleave-title part-two-interleave-desc">
+  <title id="part-two-interleave-title">Interleaved effects need independent recovery</title>
+  <desc id="part-two-interleave-desc">A1, B1, A2, B2, A3 are interleaved. Removing A must preserve B.</desc>
+  <text class="diagram-title" x="410" y="30" text-anchor="middle">A and B share time, not ownership</text>
+  <text class="diagram-muted" x="125" y="88" text-anchor="end">events</text>
+  <line class="diagram-line" x1="150" y1="80" x2="750" y2="80"/>
+  <g class="diagram-label" text-anchor="middle">
+    <text x="210" y="72">A1</text><text x="340" y="72">B1</text><text x="470" y="72">A2</text><text x="600" y="72">B2</text><text x="720" y="72">A3</text>
+  </g>
+  <g class="diagram-accent"><circle cx="210" cy="80" r="9"/><circle cx="470" cy="80" r="9"/><circle cx="720" cy="80" r="9"/></g>
+  <g class="diagram-warm"><circle cx="340" cy="80" r="9"/><circle cx="600" cy="80" r="9"/></g>
+  <text class="diagram-muted" x="150" y="150">Global LIFO removal of A</text>
+  <line x1="210" y1="164" x2="720" y2="164" stroke="var(--site-warm)" stroke-width="3" stroke-dasharray="8 8"/>
+  <text class="diagram-label" x="720" y="190" text-anchor="end">A3 → B2 → A2 → B1 → A1</text>
+  <text class="diagram-warm" x="720" y="218" text-anchor="end">B is removed by accident</text>
+  <text class="diagram-muted" x="150" y="270">Component-owned recovery of A</text>
+  <line x1="210" y1="284" x2="720" y2="284" stroke="var(--site-accent)" stroke-width="3"/>
+  <text class="diagram-label" x="720" y="310" text-anchor="end">undo A3 → undo A2 → undo A1</text>
+  <text class="diagram-accent" x="720" y="338" text-anchor="end">B1 and B2 remain</text>
+</svg>
+</div>
+
+---
+
+## The Harder Case: Effects Interleave
+
+Suppose components A and B modify shared state in this order:
+
+```text
+A1
+B1
+A2
+B2
+A3
+```
+
+Now remove **A** while B remains.
+
+A global LIFO stack would produce:
+
+```text
+undo A3
+undo B2
+undo A2
+undo B1
+undo A1
+```
+
+That removes B too.
+
+We could undo everything and replay B, but dynamic composition quickly starts resembling recovery machinery.
+
+The paper therefore studies the conditions under which effects from different components can be independently recovered. This is where **effect independence** matters.[@cordiverse2026]
+
+---
+
+## Concrete Interleaving Example
+
+Start with:
+
+```python
+runtime.tools = {}
+```
+
+Component A:
+
+```python
+runtime.tools["search"] = search_tool
+```
+
+Component B:
+
+```python
+runtime.tools["calculator"] = calculator_tool
+```
+
+Final state:
+
+```python
+{
+    "search": search_tool,
+    "calculator": calculator_tool,
+}
+```
+
+Removing A should leave:
+
+```python
+{
+    "calculator": calculator_tool,
+}
+```
+
+That is relatively safe because the effects occupy independent keys.
+
+Now change the example.
+
+A does:
+
+```python
+runtime.tools["search"] = search_v1
+```
+
+B does:
+
+```python
+runtime.tools["search"] = search_v2
+```
+
+What should unloading A do?
+
+If A's inverse says:
+
+```python
+del runtime.tools["search"]
+```
+
+it destroys B's contribution.
+
+If it restores a previous value, correctness depends on exactly which value was captured and on the permitted interleavings.
+
+This is why:
+
+> **Every effect has an undo function**
+
+is not enough for arbitrary dynamic composition.
+
+The relationships among effects matter.
+
+---
+
+## OS Analogy: Driver Cleanup
+
+Kernel modules and drivers commonly have paired setup and cleanup operations.[@linuxDriverBasics]
+
+The conventional structure resembles:
+
+```python
+def init():
+    register_a()
+    register_b()
+    register_c()
+
+def exit():
+    unregister_c()
+    unregister_b()
+    unregister_a()
+```
+
+The effect-oriented structure instead aims for:
+
+```python
+effect(register_a)
+effect(register_b)
+effect(register_c)
+```
+
+where each registration yields or carries the corresponding recovery action.
+
+### Where the analogy breaks
+
+Kernel cleanup APIs do not make arbitrary shared-state mutations mathematically independent.
+
+A process may write a file.
+
+A driver may alter external hardware.
+
+A component may send a network request.
+
+Those operations are not automatically reversible.
+
+A revertible programming model can guarantee recovery only over effects that fit the model and its assumptions.
+
+You cannot unsend an email with:
+
+```python
+undo()
+```
+
+At best you can perform a compensating action:
+
+```python
+send_correction()
+```
+
+Compensation and exact inversion are different properties.
+
+---
+
+## A Slightly Better Effect Scope
+
+```python
+class EffectScope:
+    def __init__(self):
+        self._undo = []
+        self._disposed = False
+
+    def add(self, operation):
+        if self._disposed:
+            raise RuntimeError("scope already disposed")
+
+        undo = operation()
+        self._undo.append(self._once(undo))
+
+    def _once(self, fn):
+        used = False
+
+        def wrapped():
+            nonlocal used
+
+            if used:
+                return
+
+            used = True
+            fn()
+
+        return wrapped
+
+    def dispose(self):
+        if self._disposed:
+            return
+
+        self._disposed = True
+
+        while self._undo:
+            self._undo.pop()()
+```
+
+Now repeated disposal is harmless:
+
+```python
+scope.dispose()
+scope.dispose()
+scope.dispose()
+```
+
+This does not reproduce Cordis exactly, but it teaches the lifecycle property we need before moving on.
+
+---
+
+[Previous: Why Dynamic AI Systems Break in Two Different Directions](../part-1-dynamic-ai-systems/index.qmd) · [Next: Reactive Coeffects — Dependencies That Control Component Lifetime](../part-3-reactive-coeffects/index.qmd)

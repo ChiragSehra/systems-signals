@@ -1,0 +1,556 @@
+---
+title: "Reactive Coeffects — Dependencies That Control Component Lifetime"
+description: "How components declare what they need and react when runtime dependencies change."
+date: 2026-08-17
+author: "Chirag Sehra"
+categories:
+  - Agents
+  - Systems
+  - Distributed Systems
+series: "Spatiotemporal Composability"
+series_order: 3
+draft: false
+---
+
+## Effects Ask: What Did I Change?
+
+## Coeffects Ask: What Do I Need?
+
+Consider this agent component:
+
+```python
+class AgentLoop:
+    async def run(self, ctx):
+        response = await ctx.services["llm"].complete(...)
+        await ctx.services["sessions"].append(response)
+```
+
+It depends on:
+
+```text
+llm
+sessions
+```
+
+It may also require:
+
+```text
+tools
+approvals
+sandbox
+```
+
+Those requirements are currently hidden inside implementation code.
+
+The runtime discovers them when something fails:
+
+```text
+KeyError: "llm"
+```
+
+A better model makes them explicit:
+
+```python
+class AgentLoop:
+    requires = {
+        "llm",
+        "sessions",
+        "tools",
+    }
+```
+
+Now the runtime can reason about dependencies before executing the component.
+
+That is the intuition behind the paper's **reactive coeffects**.[@cordiverse2026]
+
+---
+
+## The Coeffect Context
+
+The paper models the dependency environment as:
+
+\[
+\Sigma
+\coloneqq
+(k:K)\rightharpoonup \mathcal{V}_k
+\]
+
+Think of \(\Sigma\) as a typed partial table:
+
+```text
+key         value
+
+llm         DeepSeekAdapter
+tools       ToolRegistry
+sessions    PostgresSessionStore
+```
+
+"Partial" matters because a key can be absent:
+
+```text
+llm         DeepSeekAdapter
+sessions    PostgresSessionStore
+tools       MISSING
+```
+
+A dependency specification can then be tested against the current environment.
+
+Conceptually:
+
+\[
+\sigma \models d
+\]
+
+means that state \(\sigma\) satisfies dependency specification \(d\).
+
+For a basic list of required services, satisfaction means all required keys are currently resolvable.[@cordiverse2026]
+
+---
+
+## Worked Example: A Reactive Dependency Runtime
+
+```python
+class Runtime:
+    def __init__(self):
+        self.services = {}
+        self.components = []
+
+    def provide(self, name, value):
+        self.services[name] = value
+        self.refresh()
+
+    def remove(self, name):
+        del self.services[name]
+        self.refresh()
+
+    def refresh(self):
+        for component in self.components:
+            component.refresh(self)
+```
+
+Define a component:
+
+```python
+class Component:
+    def __init__(self, requires, apply):
+        self.requires = set(requires)
+        self.apply = apply
+        self.scope = None
+
+    def satisfied(self, runtime):
+        return self.requires <= runtime.services.keys()
+```
+
+Now dependency availability is explicit.
+
+---
+
+## Activation and Deactivation
+
+```{mermaid}
+stateDiagram-v2
+  [*] --> Inactive
+  Inactive --> Active: dependencies satisfied
+  Active --> Inactive: dependency disappears
+  Active --> Active: dependency binding changes / refresh
+  Inactive --> [*]
+```
+
+```python
+def refresh(self, runtime):
+    ready = self.satisfied(runtime)
+
+    if ready and self.scope is None:
+        self.activate(runtime)
+
+    elif not ready and self.scope is not None:
+        self.deactivate()
+```
+
+Activation:
+
+```python
+def activate(self, runtime):
+    self.scope = EffectScope()
+    self.apply(runtime, self.scope)
+```
+
+Deactivation:
+
+```python
+def deactivate(self):
+    self.scope.dispose()
+    self.scope = None
+```
+
+We now have:
+
+```text
+dependencies missing
+        │
+        ▼
+     INACTIVE
+        │
+ dependencies satisfied
+        ▼
+      ACTIVE
+        │
+ dependency disappears
+        ▼
+     INACTIVE
+```
+
+Effects and coeffects have started to work together.
+
+---
+
+## Worked Lifecycle
+
+Suppose the agent requires:
+
+```python
+agent = Component(
+    requires={"llm", "tools", "sessions"},
+    apply=start_agent,
+)
+```
+
+At startup:
+
+```text
+services = {}
+Agent: INACTIVE
+```
+
+Add sessions:
+
+```python
+runtime.provide("sessions", sessions)
+```
+
+State:
+
+```text
+sessions ✓
+llm      ✗
+tools    ✗
+
+Agent: INACTIVE
+```
+
+Add LLM:
+
+```python
+runtime.provide("llm", deepseek)
+```
+
+State:
+
+```text
+sessions ✓
+llm      ✓
+tools    ✗
+
+Agent: INACTIVE
+```
+
+Add tools:
+
+```python
+runtime.provide("tools", tool_registry)
+```
+
+Now:
+
+```text
+sessions ✓
+llm      ✓
+tools    ✓
+
+Agent: ACTIVE
+```
+
+Remove tools:
+
+```python
+runtime.remove("tools")
+```
+
+Now:
+
+```text
+Agent: INACTIVE
+```
+
+The dependency relation drives lifetime.
+
+The agent does not need to poll:
+
+```python
+while True:
+    if tools_exist():
+        ...
+```
+
+---
+
+## Three Interesting Context Changes
+
+### Activating
+
+```text
+before:
+llm   ✓
+tools ✗
+
+after:
+llm   ✓
+tools ✓
+```
+
+Satisfaction changes:
+
+```text
+false → true
+```
+
+The component can activate.
+
+### Deactivating
+
+```text
+before:
+llm   ✓
+tools ✓
+
+after:
+llm   ✓
+tools ✗
+```
+
+Satisfaction changes:
+
+```text
+true → false
+```
+
+The component must deactivate.
+
+### Still satisfied, but different
+
+```text
+before:
+llm = Provider A
+tools ✓
+
+after:
+llm = Provider B
+tools ✓
+```
+
+The dependency predicate remains:
+
+```text
+true → true
+```
+
+But the resolved dependency changed.
+
+This case becomes the central problem of Part 4.
+
+---
+
+## OS Analogy: Linux Supplier and Consumer Devices
+
+Linux device links provide a strong mental model here.
+
+A dependency can be represented as:
+
+```text
+Supplier
+   │
+   ▼
+Consumer
+```
+
+The kernel can use this information to enforce lifecycle ordering such as supplier availability before consumer probe and consumer unbinding before supplier removal.[@linuxDeviceLinks]
+
+Compare:
+
+```text
+GPU/MMU Supplier
+        │
+        ▼
+Consumer Device
+```
+
+with:
+
+```text
+LLM Provider
+     │
+     ▼
+Agent Loop
+```
+
+or:
+
+```text
+MCP Connection
+      │
+      ▼
+MCP Tool Plugin
+```
+
+The useful intuition is:
+
+> A consumer should not be operational while a required provider is unavailable.
+
+### Where the analogy breaks
+
+Linux device links are not a general effect/coeffect calculus.
+
+Cordis combines dependency-driven lifetimes with reversible effects, context scoping, replacement and runtime composition.
+
+The analogy helps us understand **why dependencies should participate in lifecycle**. It does not reproduce the paper's formal semantics.
+
+---
+
+## Dependency Graphs Instead of Boot Order
+
+Without declared dependencies, startup often becomes:
+
+```python
+load_sessions()
+load_tools()
+load_llm()
+load_agent()
+```
+
+Why this order?
+
+Because someone knows:
+
+```text
+agent requires llm
+agent requires tools
+agent requires sessions
+```
+
+The knowledge is encoded as an ordered script.
+
+With many plugins, boot order becomes fragile:
+
+```text
+plugin 17 before plugin 34
+plugin 29 after plugin 8
+plugin 57 only if plugin 13 exists
+...
+```
+
+Reactive dependencies instead encode the graph:
+
+```text
+Sessions ─────────────┐
+                     │
+Tools ────────────────┼──► Agent
+                     │
+LLM ─────────────────┘
+```
+
+The runtime can derive lifecycle behaviour from the graph.
+
+The distinction is:
+
+```text
+"start these things in this order"
+```
+
+versus:
+
+```text
+"this component requires these capabilities"
+```
+
+---
+
+## Cordis Mapping: `inject`
+
+Cordis uses declared service dependencies to control plugin activation. DeepSeek Harness builds on that mechanism and also uses package/runtime invariants around mutable services and lifecycle relationships.[@deepseekHarness2026; @deepseekInvariants2026]
+
+Conceptually:
+
+```ts
+inject = ['llm', 'tools', 'sessions']
+```
+
+means:
+
+```text
+I consume:
+llm
+tools
+sessions
+```
+
+not:
+
+```text
+run me after lines 5, 9 and 14 of boot.ts
+```
+
+Our Python:
+
+```python
+requires={"llm", "tools", "sessions"}
+```
+
+teaches the architectural idea without pretending to be Cordis syntax or implementation.
+
+---
+
+## Dependency Cycles
+
+Suppose:
+
+```text
+A requires B
+B requires A
+```
+
+Initial state:
+
+```text
+A inactive because B absent
+B inactive because A absent
+```
+
+Nothing starts.
+
+This is not the same as a traditional mutex deadlock, but it has the same practical smell: a cyclic dependency structure prevents progress.
+
+A common architectural response is decomposition.
+
+Instead of:
+
+```text
+Agent requires ToolRegistry
+ToolRegistry requires Agent
+```
+
+split the integration:
+
+```text
+AgentCore
+ToolRegistryCore
+
+ToolExecutionBridge
+    requires AgentCore
+    requires ToolRegistryCore
+```
+
+The dependency relation becomes acyclic.
+
+---
+
+[Previous: Revertible Effects — Making Runtime Changes Undoable](../part-2-revertible-effects/index.qmd) · [Next: Async Reloads, Epochs and the Race You Probably Missed](../part-4-async-reloads-and-epochs/index.qmd)

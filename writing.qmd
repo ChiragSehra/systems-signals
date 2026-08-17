@@ -3,6 +3,11 @@ title: "Writing"
 description: "All published notes, essays, and technical deep dives."
 page-layout: full
 comments: false
+listing:
+  contents: posts
+  sort: "date desc"
+  type: default
+  fields: [title, description, date, categories]
+  categories: true
+  feed: true
 ---
-
-No articles published yet. Create a new article under `posts/<slug>/index.qmd`; when the first article is added, restore the generated listing configuration described in `README.md`.

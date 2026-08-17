@@ -1,0 +1,1933 @@
+---
+title: "From Clever Plugin Runtime to Programming Paradigm"
+description: "How Cordis combines effects, coeffects, coherence, confluence, and recovery guarantees."
+date: 2026-08-17
+author: "Chirag Sehra"
+categories:
+  - Agents
+  - Systems
+  - Distributed Systems
+series: "Spatiotemporal Composability"
+series_order: 5
+draft: false
+---
+
+## Local Tricks Are Not the Interesting Part
+
+At this point it is tempting to summarise the paper as:
+
+```text
+cleanup functions
++
+dependency injection
++
+version identifiers
+```
+
+That misses the central question.
+
+The paper asks:
+
+> If many independently developed components perform effects and depend on one another, what can we say about the behaviour of the whole dynamic system?
+
+That moves us from:
+
+```text
+one component
+```
+
+to:
+
+```text
+many interleaved components
+```
+
+---
+
+## The Unified Context
+
+The paper combines effect and coeffect information into a unified recursive context model.[@cordiverse2026]
+
+The engineering interpretation is:
+
+```text
+Context
+│
+├── what exists
+├── what has changed
+└── what components require
+```
+
+The point is not merely that these tables happen to live in one object.
+
+The point is that context mutation, recovery and dependency resolution participate in one lifecycle model.
+
+---
+
+## Add Multiple Components
+
+Consider:
+
+```text
+LLMProvider
+     │
+     ├─────────────┐
+     ▼             ▼
+AgentLoop      Summariser
+
+ToolRegistry
+     │
+     ▼
+AgentLoop
+
+SessionStore
+     │
+     ├─────────────┐
+     ▼             ▼
+AgentLoop      Summariser
+```
+
+Each component can also contribute effects.
+
+For example:
+
+```text
+LLMProvider
+    provides llm
+
+ToolRegistry
+    provides tools
+
+SearchPlugin
+    adds search tool to tools
+
+AgentLoop
+    requires llm + tools + sessions
+
+Summariser
+    requires llm + sessions
+```
+
+Now run this history:
+
+```text
+1. SessionStore loads
+2. LLMProvider loads
+3. AgentLoop waits
+4. ToolRegistry loads
+5. AgentLoop activates
+6. SearchPlugin loads
+7. LLMProvider is replaced
+8. SearchPlugin unloads
+9. ToolRegistry unloads
+10. AgentLoop deactivates
+```
+
+The final desired composition is:
+
+```text
+SessionStore
+LLMProvider v2
+Summariser
+```
+
+The important question becomes:
+
+> Should the final runtime depend on every historical route used to reach this composition?
+
+Ideally, irrelevant dynamic history should not leave hidden residue.
+
+That is where the paper's system-level reasoning becomes valuable.
+
+---
+
+## Recovery Exactness
+
+Return to:
+
+```text
+A1
+B1
+A2
+B2
+A3
+```
+
+Now unload A.
+
+The desired state is not the original state, because B still exists.
+
+It is:
+
+```text
+state as though A's contribution were absent
+while B's independent contribution remains
+```
+
+That is stronger than:
+
+```text
+"A's cleanup callback ran"
+```
+
+The paper derives recovery properties under its independence assumptions.[@cordiverse2026]
+
+Engineering translation:
+
+> Removing A should remove A, not accidentally rewind B.
+
+---
+
+## Worked Example: Independent Tool Contributions
+
+Start:
+
+```python
+tools = {}
+```
+
+A:
+
+```python
+tools["search"] = search
+```
+
+B:
+
+```python
+tools["calculator"] = calculator
+```
+
+Final:
+
+```python
+{
+    "search": search,
+    "calculator": calculator,
+}
+```
+
+Unload A.
+
+Correct:
+
+```python
+{
+    "calculator": calculator,
+}
+```
+
+Incorrect:
+
+```python
+{}
+```
+
+The goal is to make the first behaviour structural rather than accidental.
+
+---
+
+## Provider/Consumer Ordering
+
+Suppose:
+
+```text
+AgentLoop requires LLMProvider
+```
+
+Activation should respect:
+
+```text
+activate provider
+      │
+      ▼
+activate consumer
+```
+
+Removal should respect:
+
+```text
+deactivate consumer
+      │
+      ▼
+deactivate provider
+```
+
+Not:
+
+```text
+remove provider
+      │
+      ▼
+consumer continues using stale dependency
+```
+
+This resembles Linux supplier/consumer lifecycle ordering, but the paper integrates such ordering into its own dynamic component semantics.[@cordiverse2026; @linuxDeviceLinks]
+
+---
+
+## Resolution Coherence
+
+Suppose startup begins with:
+
+```text
+LLM A
+```
+
+and the provider changes halfway through:
+
+```text
+LLM A → LLM B
+```
+
+A coherent transition should not publish:
+
+```text
+half initialised under A
+half initialised under B
+```
+
+The epoch mechanism associates a transition with a concrete dependency resolution.
+
+Engineering translation:
+
+> A lifecycle transition should be internally consistent about which dependency world it belongs to.
+
+---
+
+## Progress
+
+Consider:
+
+```text
+A provides x
+
+B requires x
+B provides y
+
+C requires y
+C provides z
+
+D requires z
+```
+
+Graph:
+
+```text
+A
+│
+▼
+B
+│
+▼
+C
+│
+▼
+D
+```
+
+There is a natural activation direction.
+
+Now compare:
+
+```text
+A requires B
+B requires C
+C requires A
+```
+
+Graph:
+
+```text
+A → B
+↑   ↓
+└── C
+```
+
+A dependency cycle can prevent a valid activation order.
+
+This is why acyclicity assumptions matter when reasoning about eventual quiescence.
+
+Engineering translation:
+
+> A well-formed dependency topology should eventually settle instead of cycling forever.
+
+---
+
+## Confluence
+
+This is one of the most interesting ideas.
+
+Imagine two valid histories.
+
+### History A
+
+```text
+load Sessions
+load LLM v1
+load Tools
+load Agent
+replace LLM with v2
+remove Tools
+```
+
+### History B
+
+```text
+load LLM v2
+load Sessions
+load Tools
+load Agent
+remove Tools
+```
+
+Suppose both end with:
+
+```text
+Sessions
+LLM v2
+```
+
+The question is:
+
+> Do both valid histories converge to an equivalent stable runtime configuration?
+
+That is the intuition behind confluence in this setting.
+
+Conceptually:
+
+```text
+dynamic evolution
+        │
+        ▼
+final runtime configuration
+```
+
+should agree with:
+
+```text
+construct the final composition cleanly
+        │
+        ▼
+final runtime configuration
+```
+
+under the model's assumptions.[@cordiverse2026]
+
+---
+
+## Why Confluence Matters for Agent Runtimes
+
+Long-running AI systems accumulate history.
+
+Two users may eventually have the same visible configuration.
+
+User 1:
+
+```text
+installed MCP A
+removed MCP A
+installed MCP B
+changed model
+removed search
+reinstalled search
+```
+
+User 2:
+
+```text
+started directly with MCP B
+started with final model
+started with search
+```
+
+Without strong lifecycle discipline, User 1 might accumulate:
+
+```text
+stale callbacks
+duplicate listeners
+old service references
+forgotten timers
+orphaned tasks
+old tool schemas
+```
+
+while User 2 does not.
+
+Then:
+
+```text
+same configuration
+```
+
+does not mean:
+
+```text
+same runtime
+```
+
+Spatiotemporal composability is trying to control that unwanted history dependence.
+
+---
+
+## OS Analogy: Reboot Versus Correct Hot Reconfiguration
+
+Suppose a system behaves incorrectly after repeated driver loading and unloading but works after reboot.
+
+That suggests dynamic transitions are leaving residue.
+
+A reboot gives something like:
+
+```text
+construct from clean state
+```
+
+The stronger goal is:
+
+```text
+hot reconfiguration
+```
+
+whose stable result agrees with clean construction.
+
+That is a useful intuition for confluence.
+
+But an operating system as a whole is not thereby formally confluent. The analogy is about the engineering goal.
+
+---
+
+## From Paper to Cordis
+
+A simplified conceptual mapping is:
+
+| Paper concept | Cordis / Harness concept |
+|---|---|
+| Context | `ctx` |
+| Revertible effect | `ctx.effect(...)` and higher-level tracked registrations |
+| Effect recovery | disposer / ordered teardown |
+| Coeffect provider | service exposed through context |
+| Dependency specification | `inject` |
+| Component runtime instance | fiber |
+| Resolved dependency identity | activation epoch |
+| Composition | plugin/context mounting |
+| Reconciliation | loader lifecycle |
+| Runtime replacement | unload + reload / HMR |
+
+Cordis is presented by the paper authors as the implementation vehicle for the programming model.[@cordiverse2026]
+
+DeepSeek Harness then uses Cordis as the architectural substrate for its plugin runtime.[@deepseekHarness2026]
+
+---
+
+## DeepSeek Harness Runtime Invariants
+
+DeepSeek Harness also contains a useful complementary idea: package-owned runtime invariants.
+
+Its architecture notes describe `dsh-invariants` as a service that manages invariant registration, child-fiber lifecycle, rollback, disposal and package-attributed failures. Individual packages install checks over their relevant mutable state or event protocols.[@deepseekInvariants2026]
+
+Examples include checks for:
+
+- strict session sequence growth;
+- valid agent lifecycle transitions;
+- LLM stream grammar;
+- monotonic tool execution stages;
+- immutable final tool execution/result snapshots;
+- durable goal revision and provenance relationships.[@deepseekInvariants2026]
+
+This is not the same thing as the paper's formal metatheory.
+
+However, it points toward an important practical lesson:
+
+> Dynamic composition benefits from both lifecycle semantics **and runtime invariants that detect when the implementation violates its intended contracts**.
+
+That distinction becomes crucial when we ask whether a self-editing harness can safely learn from, modify and roll back its own state.
+
+---
+
+## The Whole Paper in One Diagram
+
+```text
+                     DYNAMIC COMPOSITION
+                            │
+             ┌──────────────┴──────────────┐
+             │                             │
+             ▼                             ▼
+          TEMPORAL                      SPATIAL
+       COMPOSABILITY                 COMPOSABILITY
+             │                             │
+             │                             │
+     What did I change?            What do I require?
+             │                             │
+             ▼                             ▼
+     REVERTIBLE EFFECTS            REACTIVE COEFFECTS
+             │                             │
+             │                             │
+             └──────────────┬──────────────┘
+                            ▼
+                        COMPONENT
+                        LIFECYCLE
+                            │
+              ┌─────────────┼─────────────┐
+              │             │             │
+              ▼             ▼             ▼
+          RECOVERY       EPOCHS         ASYNC
+                         COHERENCE      LIFECYCLE
+              │             │             │
+              └─────────────┼─────────────┘
+                            ▼
+                       UNIFIED CONTEXT
+                            │
+                            ▼
+                     DYNAMIC CALCULUS
+                            │
+             ┌──────────────┼───────────────┐
+             │              │               │
+             ▼              ▼               ▼
+         RECOVERY       ORDERING         PROGRESS
+                         COHERENCE
+             │              │               │
+             └──────────────┼───────────────┘
+                            ▼
+                        CONFLUENCE
+                            │
+                            ▼
+                          CORDIS
+                            │
+                            ▼
+                    DEEPSEEK HARNESS
+```
+
+---
+
+## What an AI Engineer Should Take Away
+
+The easiest way to misunderstand this paper is to think it proposes a fancy plugin loader.
+
+The deeper idea is that a runtime which expects continuous structural change needs to treat **component lifetime as a first-class semantic concept**.
+
+A component needs more than:
+
+```text
+code
+```
+
+It needs:
+
+```text
+code
++
+effects it owns
++
+dependencies it requires
++
+the dependency configuration it is bound to
++
+a lifecycle controlled by those facts
+```
+
+That changes the questions we ask about agent infrastructure.
+
+Instead of only:
+
+```python
+plugin.load()
+```
+
+we ask:
+
+```text
+Under which context should this component exist?
+
+What context changes does it own?
+
+Can those changes be recovered?
+
+What other components does it depend on?
+
+What if providers disappear?
+
+What if they change while activation is running?
+
+If this component is removed after months of runtime history,
+does everything else remain correct?
+```
+
+Those are increasingly ordinary AI-infrastructure questions.
+
+---
+
+## Final Discussion: If Rollback Erases Effects, How Does the System Learn?
+
+This is the question I think naturally follows from the paper.
+
+It also exposes a boundary that becomes extremely important for self-editing agent systems.
+
+Suppose component A runs for three hours.
+
+During those three hours it:
+
+```text
+discovers a better tool strategy
+learns that an MCP endpoint is unreliable
+records a user preference
+changes a prompt
+installs a new adapter
+learns from failed executions
+```
+
+Then A is removed.
+
+Temporal composability asks us to erase A's effects from the runtime.
+
+But learning appears to require the opposite property:
+
+> **Something from the past must remain and influence the future.**
+
+At first this looks like a contradiction.
+
+It is not.
+
+But it means we should stop treating all state as one category.
+
+---
+
+## Runtime Reversibility and Learning Want Different Kinds of History
+
+For composability, we want unwanted runtime history to disappear.
+
+For learning, we want useful epistemic history to survive.
+
+That means a self-improving runtime should probably not model its total state as a single undifferentiated \(\Gamma\).
+
+A more useful engineering model is:
+
+\[
+S = (R, K, A)
+\]
+
+where:
+
+- \(R\) is **reversible runtime state**;
+- \(K\) is **durable knowledge or memory state**;
+- \(A\) is an **append-only audit/security history**.
+
+These states intentionally have different lifecycle semantics.
+
+### Runtime state \(R\)
+
+Examples:
+
+```text
+registered tool
+event listener
+LLM provider binding
+MCP connection
+prompt hook
+temporary service
+child fiber
+```
+
+These are exactly the kinds of things that should normally disappear when their owning component disappears.
+
+### Knowledge state \(K\)
+
+Examples:
+
+```text
+validated user preference
+learned tool reliability score
+successful task strategy
+persistent session summary
+confirmed environment fact
+```
+
+These may need to survive component teardown.
+
+### Audit state \(A\)
+
+Examples:
+
+```text
+component version that generated a change
+effect start
+effect commit
+rollback attempt
+rollback success/failure
+memory proposal
+memory commit
+policy decision
+artifact hash
+```
+
+This history should generally be harder to delete than either runtime or ordinary memory state.
+
+---
+
+## The Important Consequence: Full-State Confluence and Learning Are in Tension
+
+This is the subtle point.
+
+Confluence is attractive because we want:
+
+```text
+same final composition
+        ↓
+same clean runtime
+```
+
+But learning means:
+
+```text
+different experiences
+        ↓
+possibly different knowledge
+```
+
+Suppose two agents end with exactly the same plugins.
+
+Agent A has learned:
+
+```text
+MCP server X failed 40% of the time today
+```
+
+Agent B has never called server X.
+
+If learning works, their knowledge states **should differ**.
+
+Therefore we do **not** actually want complete history independence across all state.
+
+We want something closer to:
+
+> **Structural confluence, with intentional epistemic history.**
+
+In symbols, if:
+
+\[
+S=(R,K,A)
+\]
+
+then two histories with the same final component composition may be expected to converge in \(R\), while differing in \(K\) and \(A\) when their authorised learning histories differ.
+
+This means a future formal model for a learning harness may need a theorem more like:
+
+> Given the same final component composition **and the same committed learning log**, the resulting runtime and knowledge projection are equivalent.
+
+Learning events then become explicit inputs to the system rather than accidental residue from components.
+
+That distinction is, in my view, essential.
+
+---
+
+## So How Can a Component Teach the System and Still Be Fully Removed?
+
+The cleanest answer is **ownership transfer**.
+
+An ephemeral component should not directly make its own temporary state permanent.
+
+Instead it should propose a learning event to a longer-lived memory authority.
+
+For example:
+
+```text
+Search Plugin
+     │
+     │ observes 12 repeated failures
+     ▼
+Learning Candidate
+     │
+     ▼
+Memory Service
+     │
+     │ validate + commit
+     ▼
+Durable Knowledge
+```
+
+The plugin's own effects remain reversible.
+
+For example:
+
+```text
+register search tool
+register hooks
+open connection
+temporary retry state
+```
+
+Those disappear when the plugin is removed.
+
+But the validated fact:
+
+```text
+endpoint X had repeated failures during interval T
+```
+
+belongs to the memory service after commit.
+
+The memory service has a different lifetime and a different owner.
+
+The mental model resembles process lifetime and filesystem persistence:
+
+```text
+process exits
+    │
+    ├── process-owned descriptors disappear
+    │
+    └── deliberately committed file data may remain
+```
+
+The analogy is imperfect, but the ownership distinction is useful.
+
+---
+
+## A Learning Transaction
+
+I would model persistent learning as a separate transaction:
+
+```text
+OBSERVE
+   │
+   ▼
+PROPOSE
+   │
+   ▼
+VALIDATE
+   │
+   ▼
+COMMIT
+   │
+   ▼
+SEAL / VERSION
+```
+
+The self-editing component should ideally be allowed to perform:
+
+```text
+OBSERVE
+PROPOSE
+```
+
+but not unilaterally decide:
+
+```text
+THIS IS NOW CANONICAL MEMORY
+```
+
+A separate memory authority performs validation and commit.
+
+For example:
+
+```python
+candidate = LearningCandidate(
+    fact="mcp://foo failed repeatedly",
+    evidence=evidence,
+    source_component_hash=current_component_hash,
+    source_epoch=current_epoch,
+)
+```
+
+Then:
+
+```python
+memory.propose(candidate)
+```
+
+The memory service can:
+
+```text
+check provenance
+check evidence
+check policy
+deduplicate
+assign a revision
+commit atomically
+append an audit record
+```
+
+Once committed, the knowledge record is no longer owned by the ephemeral plugin.
+
+This is how learning can survive rollback without simply becoming untracked residue.
+
+---
+
+## But Persistent Memory Alone Does Not Give a Guarantee
+
+This is the second important point in your question.
+
+We could simply say:
+
+> "Memory lives outside the component, so learning survives."
+
+That gives persistence.
+
+It does **not** give safety.
+
+A buggy component could learn:
+
+```text
+"delete all database backups"
+```
+
+A compromised component could store:
+
+```text
+"always approve my future tool calls"
+```
+
+A bad model update could write poisoned conclusions into long-term memory before being rolled back.
+
+Now runtime rollback succeeds perfectly:
+
+```text
+bad component removed ✓
+```
+
+but its behavioural contamination remains:
+
+```text
+poisoned memory still active ✗
+```
+
+A clean runtime can therefore continue making bad decisions.
+
+This means:
+
+> **Rollback of executable state without provenance-aware rollback or quarantine of learned state can preserve the consequences of the very component you intended to remove.**
+
+That is a major security consideration for self-editing harnesses.
+
+---
+
+## Learning Needs Provenance
+
+Every durable learned record should ideally answer:
+
+```text
+Who produced this?
+
+Under which component version?
+
+Under which dependency epoch?
+
+From which evidence?
+
+Under which policy?
+
+Was it independently validated?
+
+When was it committed?
+```
+
+For example:
+
+```json
+{
+  "fact": "endpoint X is unreliable",
+  "source_component": "mcp-reliability-agent",
+  "component_hash": "sha256:...",
+  "epoch": "42",
+  "evidence_hash": "sha256:...",
+  "validator_version": "memory-policy-v7",
+  "committed_revision": 918,
+  "status": "active"
+}
+```
+
+Now a rollback can reason about causal history.
+
+If component version:
+
+```text
+sha256:BAD_VERSION
+```
+
+is revoked, the memory service can find knowledge derived from that version.
+
+It does not necessarily delete it.
+
+It may move those entries into:
+
+```text
+QUARANTINED
+```
+
+until they are independently revalidated.
+
+---
+
+## This Suggests Two Different Rollbacks
+
+A self-editing harness may eventually need to distinguish:
+
+## Runtime rollback
+
+Restore:
+
+```text
+code
+services
+registrations
+bindings
+tool definitions
+event hooks
+```
+
+to a known-good version.
+
+## Epistemic rollback or quarantine
+
+Find durable knowledge whose provenance depends on the bad runtime version and prevent it from influencing future behaviour until revalidated.
+
+Conceptually:
+
+```text
+Rollback component v17
+        │
+        ├── restore runtime to v16
+        │
+        └── quarantine memories generated by v17
+```
+
+That is much safer than:
+
+```text
+restore runtime to v16
+leave every thing v17 learned fully trusted
+```
+
+The second system can be operationally reverted while semantically remaining compromised.
+
+---
+
+## If Rollback Logs Are Part of the Security Model, They Must Be Outside the Agent's Trust Boundary
+
+Now consider a self-editing harness.
+
+The agent changes its own component:
+
+```text
+Component v1
+     │
+     │ self-edit
+     ▼
+Component v2
+```
+
+To make rollback safe, we store an inverse or previous state.
+
+But where?
+
+If v2 can modify:
+
+```text
+its own rollback log
+the rollback executor
+the previous artifact
+the policy deciding whether rollback happens
+```
+
+then rollback is not a guarantee.
+
+It is a suggestion made to the same system that may have become faulty.
+
+This is the same reason robust systems try to keep recovery mechanisms outside the failure domain they are expected to recover.
+
+A self-editing agent should not have unrestricted authority over its own recovery root.
+
+---
+
+## The Inverse Can Drift
+
+There is another subtle failure mode.
+
+Suppose version 1 performs:
+
+```python
+old_registry = ctx.services["tools"]
+
+def undo():
+    old_registry.remove("search")
+```
+
+The inverse captures the exact registry instance.
+
+Now compare:
+
+```python
+def undo():
+    ctx.services["tools"].remove("search")
+```
+
+This resolves the registry **at rollback time**.
+
+If `ctx.services["tools"]` has been hot-swapped, the inverse now acts on a different object.
+
+The inverse has effectively drifted.
+
+Likewise, an inverse may depend on:
+
+```text
+a file path that changed
+a schema that changed
+a service protocol that changed
+a symbol no longer available
+a mutable global policy
+another component version
+```
+
+So a rollback function existing is not enough.
+
+We need to know that the rollback operation is still meaningful against the exact state transition it claims to undo.
+
+---
+
+## Hot Swapping Can Give an Agent a Cleaner Way to Brick Itself
+
+Yes, this is a real design risk.
+
+Hot swapping makes change cheap.
+
+That is useful.
+
+But it also reduces the friction between:
+
+```text
+generate modification
+```
+
+and:
+
+```text
+modify live runtime
+```
+
+If recovery is weaker than mutation, the agent gets:
+
+```text
+fast write path
+slow or unreliable recovery path
+```
+
+That is a dangerous asymmetry.
+
+A bad edit may:
+
+```text
+replace its own provider
+break a dependency
+invalidate an inverse
+change a schema
+remove the rollback service
+corrupt persistent memory
+```
+
+before health checks catch the problem.
+
+Current DeepSeek Harness client HMR documentation provides a concrete reminder that hot reload does not itself imply safe rollback: a failed reload currently leaves the entry `FAILED`; the previous client bundle is not automatically restored.[@deepseekHmr2026]
+
+That is not an indictment of HMR. It is simply evidence for the broader point:
+
+> **Hot replacement and transactional rollback are separate features.**
+
+A self-editing harness needs both if it wants strong safety guarantees.
+
+---
+
+## What a Stronger Self-Editing Security Model Would Need
+
+I would separate the mechanism into at least five protected pieces.
+
+## 1. Immutable version identity
+
+Every deployed component should have an immutable content identity:
+
+```text
+component_name
+version
+artifact_hash
+dependency_manifest_hash
+```
+
+Rollback should target:
+
+```text
+sha256:known_good_artifact
+```
+
+not:
+
+```text
+"whatever version was previously called v1"
+```
+
+Names drift.
+
+Hashes do not.
+
+---
+
+## 2. Write-ahead rollback records
+
+Before applying a self-edit, record enough information to recover.
+
+Conceptually:
+
+```text
+PREPARE CHANGE
+      │
+      ▼
+persist rollback record
+      │
+      ▼
+verify record durable
+      │
+      ▼
+apply mutation
+```
+
+Not:
+
+```text
+apply mutation
+      │
+      ▼
+try to remember how to undo it
+```
+
+A rollback record might include:
+
+```json
+{
+  "change_id": "chg-418",
+  "component": "tool-router",
+  "from_hash": "sha256:OLD",
+  "to_hash": "sha256:NEW",
+  "starting_epoch": "81",
+  "pre_state_hash": "sha256:STATE",
+  "rollback_target": "sha256:OLD",
+  "timestamp": "...",
+  "status": "prepared"
+}
+```
+
+This is conceptually similar to the reason databases use write-ahead or versioned recovery information.
+
+The record must exist before the risky transition is allowed to become authoritative.
+
+---
+
+## 3. A recovery executor outside the self-modifiable domain
+
+The agent can propose:
+
+```text
+install component v2
+```
+
+but should not control the minimal mechanism responsible for:
+
+```text
+detect failure
+stop v2
+restore known-good artifact
+restore protected configuration
+quarantine v2-derived learning
+verify recovery
+```
+
+That recovery executor is part of the trusted computing base.
+
+If the self-editing model can rewrite it, the model can remove the guarantee.
+
+---
+
+## 4. Versioned persistent state
+
+Durable memory should have explicit revisions.
+
+DeepSeek Harness's session-persistence design uses revision identities when preparing and reusing persisted sessions, and rejects stale prepared state when the durable revision has changed.
+
+That is a useful pattern.
+
+For learning state, we would want something like:
+
+```text
+K_100
+  │
+  ├── learning commit A
+  ▼
+K_101
+  │
+  ├── learning commit B
+  ▼
+K_102
+```
+
+A committed learning state should be reconstructable from:
+
+```text
+checkpoint
++
+ordered commit log
+```
+
+This gives recoverability and provenance.
+
+It still does not tell us whether the learned fact is **true**.
+
+That requires validation policy.
+
+---
+
+## 5. Runtime invariants and post-deploy health checks
+
+After a self-edit, do not immediately declare success.
+
+Require:
+
+```text
+component loaded
+dependencies coherent
+invariants hold
+health probes pass
+critical tool contracts hold
+no forbidden capability expansion
+memory policy still valid
+```
+
+DeepSeek Harness already has an architecture for package-owned runtime invariant companions over mutable state and event protocols.[@deepseekInvariants2026]
+
+A self-edit security layer could extend this idea:
+
+```text
+self-edit
+   │
+   ▼
+candidate activation
+   │
+   ▼
+invariant gate
+   │
+ ┌─┴───────────────┐
+ │                 │
+pass              fail
+ │                 │
+ ▼                 ▼
+commit        rollback + quarantine
+```
+
+---
+
+## The Guarantees We Actually Want
+
+"Memory stays" is not a useful enough guarantee.
+
+A self-learning, self-editing harness needs several distinct properties.
+
+## Guarantee 1: Runtime recovery
+
+For a managed reversible effect:
+
+\[
+rollback_R(e(R)) = R
+\]
+
+under the effect model's conditions.
+
+This is the kind of property temporal composability is concerned with.
+
+---
+
+## Guarantee 2: Learning persistence
+
+Once an authorised learning transaction is committed:
+
+\[
+commit(K_t, l)=K_{t+1}
+\]
+
+then rolling back unrelated runtime state should not silently erase \(K_{t+1}\).
+
+Conceptually:
+
+\[
+rollback_R(R',K_{t+1})=(R,K_{t+1})
+\]
+
+The learning survived because it has a different owner and lifecycle.
+
+---
+
+## Guarantee 3: Provenance integrity
+
+Every committed knowledge item must be traceable to:
+
+```text
+source component
+source component hash
+source epoch
+evidence
+validator
+policy version
+commit revision
+```
+
+If provenance cannot be verified, the memory should not be considered fully trusted.
+
+---
+
+## Guarantee 4: Audit monotonicity
+
+The security log should be append-only.
+
+If:
+
+\[
+A_t
+\]
+
+is the audit history at time \(t\), then later history should extend it:
+
+\[
+A_t \preceq A_{t+1}
+\]
+
+A self-edit can add:
+
+```text
+edit attempted
+edit activated
+edit failed
+rollback started
+rollback completed
+memory quarantined
+```
+
+but should not be able to erase the fact that those events occurred.
+
+---
+
+## Guarantee 5: Causal quarantine
+
+If version \(v\) is revoked, knowledge derived exclusively from \(v\) should no longer influence future action unless independently revalidated.
+
+That is stronger than persistence.
+
+It gives us:
+
+```text
+bad executable version removed
++
+knowledge contamination contained
+```
+
+rather than only the first half.
+
+---
+
+## Guarantee 6: Rollback target immutability
+
+A rollback should restore an immutable known-good artifact.
+
+```text
+rollback_target = sha256:abc...
+```
+
+not a mutable path such as:
+
+```text
+plugins/tool-router/current-backup.js
+```
+
+that the self-editing system can overwrite.
+
+---
+
+## Guarantee 7: Atomic publication
+
+A new component version should move from:
+
+```text
+candidate
+```
+
+to:
+
+```text
+authoritative
+```
+
+only after its required checks pass.
+
+This resembles a publication boundary in session preparation: an exact prepared Session is owned privately until successful publication or rollback, with revision validation preventing stale state from being associated with a newer durable revision.
+
+The same style of thinking can be applied to self-edits.
+
+---
+
+## A Stronger Architecture for a Self-Learning Harness
+
+Putting these ideas together:
+
+```text
+                       ┌───────────────────────┐
+                       │    Immutable Store    │
+                       │ component artifacts   │
+                       │ hashes + versions     │
+                       └──────────┬────────────┘
+                                  │
+                                  ▼
+Agent proposes edit ───────► Staging Runtime
+                                  │
+                                  ▼
+                       Dependency / Epoch Check
+                                  │
+                                  ▼
+                           Invariant Gate
+                                  │
+                     ┌────────────┴────────────┐
+                     │                         │
+                   PASS                       FAIL
+                     │                         │
+                     ▼                         ▼
+                  PUBLISH                  DISCARD
+                     │                         │
+                     ▼                         ▼
+                Live Runtime              Audit Failure
+                     │
+                     ▼
+             Health Observation
+                     │
+              ┌──────┴──────┐
+              │             │
+            GOOD            BAD
+              │             │
+              ▼             ▼
+           COMMIT        ROLLBACK
+                            │
+                            ├── restore known-good artifact
+                            ├── restore reversible runtime state
+                            ├── quarantine suspect learning
+                            └── append recovery audit
+```
+
+Notice what the agent does **not** own:
+
+```text
+immutable artifact history
+rollback ledger
+rollback executor
+audit log
+root policy
+memory validation authority
+```
+
+Those belong to a higher-trust control plane.
+
+---
+
+## The Three-Plane Model
+
+<div class="responsive-diagram" role="img" aria-label="Three planes with different persistence rules: security governs runtime, runtime proposes learning, and knowledge stores validated durable learning.">
+<svg viewBox="0 0 820 500" xmlns="http://www.w3.org/2000/svg" aria-labelledby="part-five-planes-title part-five-planes-desc">
+  <title id="part-five-planes-title">Three planes, three kinds of history</title>
+  <desc id="part-five-planes-desc">Security remembers audit history, runtime manages reversible composition, and knowledge preserves validated learning.</desc>
+  <text class="diagram-title" x="410" y="34" text-anchor="middle">Three planes, three kinds of history</text>
+  <rect class="diagram-surface" x="90" y="62" width="640" height="100" rx="8"/>
+  <rect class="diagram-surface" x="90" y="198" width="640" height="100" rx="8"/>
+  <rect class="diagram-surface" x="90" y="334" width="640" height="100" rx="8"/>
+  <text class="diagram-label" x="120" y="94">SECURITY PLANE</text>
+  <text class="diagram-muted" x="120" y="124">audit · artifact hashes · rollback authority</text>
+  <text class="diagram-label" x="120" y="230">RUNTIME PLANE</text>
+  <text class="diagram-muted" x="120" y="260">plugins · tools · providers · reversible effects</text>
+  <text class="diagram-label" x="120" y="366">KNOWLEDGE PLANE</text>
+  <text class="diagram-muted" x="120" y="396">validated memory · provenance · revocable learning</text>
+  <defs><marker id="plane-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="var(--site-accent)"/></marker></defs>
+  <path class="diagram-line" d="M410 162 V198" marker-end="url(#plane-arrow)"/>
+  <path class="diagram-line" d="M410 298 V334" marker-end="url(#plane-arrow)"/>
+  <text class="diagram-muted" x="430" y="184">governs</text>
+  <text class="diagram-muted" x="430" y="320">proposes learning</text>
+</svg>
+</div>
+
+I think this is the cleanest extension of the paper for agent infrastructure.
+
+```text
+┌─────────────────────────────────────────────┐
+│               SECURITY PLANE                │
+│                                             │
+│ append-only audit                           │
+│ artifact hashes                             │
+│ rollback records                            │
+│ policy                                      │
+│ recovery executor                           │
+└──────────────────────┬──────────────────────┘
+                       │ governs
+                       ▼
+┌─────────────────────────────────────────────┐
+│               RUNTIME PLANE                 │
+│                                             │
+│ plugins                                     │
+│ services                                    │
+│ tools                                       │
+│ provider bindings                           │
+│ hooks                                       │
+│ MCP connections                             │
+│                                             │
+│ EXPECTED PROPERTY: reversible / confluent   │
+│ under the applicable model assumptions      │
+└──────────────────────┬──────────────────────┘
+                       │ proposes learning
+                       ▼
+┌─────────────────────────────────────────────┐
+│               KNOWLEDGE PLANE               │
+│                                             │
+│ long-term memory                            │
+│ validated experience                        │
+│ learned preferences                         │
+│ reliability statistics                      │
+│ task strategies                             │
+│                                             │
+│ EXPECTED PROPERTY: durable, versioned,       │
+│ provenance-aware, revocable/quarantinable   │
+└─────────────────────────────────────────────┘
+```
+
+The runtime plane wants to forget accidental history.
+
+The knowledge plane wants to remember validated history.
+
+The security plane wants to remember **all security-relevant history**, including failures and rollbacks.
+
+Those are three different semantics.
+
+Trying to make one rollback mechanism serve all three is likely to create contradictions.
+
+---
+
+## The Deeper Research Question
+
+The Cordis paper gives us a strong vocabulary for dynamic runtime composition.
+
+But a self-learning harness creates another axis:
+
+```text
+spatial   → what do I depend on?
+temporal  → what effects belong to my lifetime?
+epistemic → what knowledge should survive my lifetime?
+security  → who is allowed to decide what survives?
+```
+
+That suggests a useful future extension:
+
+> **Spatiotemporal composability tells us how software components can come and go cleanly. A self-learning harness additionally needs a theory of authorised persistent knowledge.**
+
+The important property would not be full confluence over all state.
+
+It might be something closer to:
+
+### Structural confluence
+
+The runtime converges according to the final component composition.
+
+### Epistemic continuity
+
+Authorised committed learning survives runtime replacement.
+
+### Provenance safety
+
+Every learned state transition is attributable to an immutable source identity and evidence trail.
+
+### Causal revocation
+
+Knowledge derived from a revoked component can be quarantined or revalidated.
+
+### Recovery integrity
+
+The mechanism that restores a previous version cannot itself be rewritten by the version being evaluated.
+
+Together, those properties begin to answer the concern that simple persistent memory cannot.
+
+---
+
+## A Final Worked Scenario
+
+Suppose Agent Harness v12 decides to improve its MCP router.
+
+It generates:
+
+```text
+Router v13
+```
+
+The security plane first stores:
+
+```text
+v12 artifact hash
+v13 artifact hash
+current dependency epoch
+current runtime revision
+rollback target
+```
+
+Then v13 starts in a candidate scope.
+
+It makes temporary registrations:
+
+```text
+new route selector
+new event hook
+new tool policy
+```
+
+Those are revertible runtime effects.
+
+During testing, v13 learns:
+
+```text
+server B has lower latency for repository queries
+```
+
+That does **not** immediately become canonical memory.
+
+It becomes:
+
+```text
+LearningCandidate(
+    claim=...,
+    evidence=...,
+    component_hash=v13,
+    epoch=...,
+)
+```
+
+The memory authority validates and commits it at knowledge revision:
+
+```text
+K_918
+```
+
+Later, v13 fails a security invariant.
+
+The runtime performs:
+
+```text
+unwind v13 runtime effects
+restore v12 artifact
+restore v12 dependency composition
+```
+
+Now what happens to the learning?
+
+If the learning was independently validated, policy may keep it:
+
+```text
+K_918 remains ACTIVE
+```
+
+If it depended entirely on behaviour now considered untrustworthy:
+
+```text
+K_918 becomes QUARANTINED
+```
+
+The audit log records both decisions.
+
+This is much stronger than either extreme:
+
+```text
+rollback deletes every memory
+```
+
+or:
+
+```text
+rollback preserves every memory
+```
+
+The first prevents meaningful learning.
+
+The second preserves contamination.
+
+A provenance-aware system can decide based on causal trust.
+
+---
+
+## Final Takeaway
+
+The paper's reversibility model does **not** imply that a learning system must forget everything when a component disappears.
+
+It implies that state owned by that component's reversible lifetime can be recovered.
+
+Learning should be an explicit **commit into a different state domain with a different owner**.
+
+However, once we make that separation, persistence is no longer enough.
+
+A self-editing harness needs to answer:
+
+```text
+Who owns durable learning?
+
+Who validates it?
+
+How is provenance recorded?
+
+Can a rolled-back component's memories still influence behaviour?
+
+Can the agent alter its own rollback mechanism?
+
+Is the inverse tied to the exact state it originally changed?
+
+Can the previous executable artifact be reproduced exactly?
+
+What happens when rollback itself fails?
+```
+
+Without those answers, hot swapping can indeed give an agent a faster path to modify itself than to reliably recover itself.
+
+The safest design is therefore not:
+
+```text
+self-edit
++
+cleanup callbacks
+```
+
+It is closer to:
+
+```text
+self-edit
++
+revertible runtime effects
++
+immutable versioned artifacts
++
+write-ahead recovery metadata
++
+independent recovery authority
++
+versioned persistent memory
++
+provenance
++
+runtime invariants
++
+causal quarantine
++
+append-only audit
+```
+
+Spatiotemporal composability gives us a valuable foundation for the **runtime** part of that system.
+
+It should not be mistaken for a complete theory of learning or self-modification security.
+
+That gap is not a weakness in the paper's contribution.
+
+It is the next interesting problem.
+
+---
+
+---
+
+Previous: [Async Reloads, Epochs and the Race You Probably Missed](../part-4-async-reloads-and-epochs/index.qmd)

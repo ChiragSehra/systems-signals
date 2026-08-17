@@ -42,6 +42,7 @@ The generated site is written to `_site/`. It is ignored by Git and should never
 ├── series.qmd                     # Series index
 ├── about.qmd                      # About page
 ├── posts/<slug>/index.qmd         # Individual articles
+├── posts/<series>/<part>/index.qmd # Series chapters
 ├── assets/                        # Shared assets such as the favicon
 ├── styles.css                     # Small site-specific styling layer
 ├── references.bib                 # Bibliography database
@@ -72,7 +73,7 @@ draft: false
 ---
 ```
 
-Because the site starts with no articles, the homepage and writing page currently show an empty state. When you add the first article, restore the generated listing blocks from the project history or ask Codex to enable the Quarto listing for `posts`; after that, future articles will appear automatically.
+The homepage and Writing page use Quarto listings, so published articles appear automatically after rendering. Keep work-in-progress articles local with `draft: true`; set `draft: false` only when the article is ready to be included in the site.
 
 Use one page title from frontmatter, then begin the body with `##` sections. Use fenced code blocks with a language, standard Quarto math syntax, Mermaid for simple diagrams, meaningful image alt text, Markdown tables, callouts, footnotes, and citations where they help the reader inspect the argument.
 
@@ -87,7 +88,11 @@ series: "Agent Systems"
 series_order: 1
 ```
 
-The series landing page currently provides the reading order. Previous/next navigation can be added as the number of chapters grows.
+The Series page provides the reading order, and each chapter includes previous/next navigation where applicable. The current example series is `Spatiotemporal Composability`.
+
+## Theme
+
+The site uses a warm neutral light theme and a charcoal dark theme. The global theme toggle lives in the navbar and remembers the reader's choice locally. Code syntax colors are customized for both modes so tokens remain readable without relying on green accents.
 
 ## Citations
 
@@ -133,4 +138,4 @@ Before publishing, run:
 quarto render
 ```
 
-Then inspect the homepage, writing listing, series page, both example articles, navigation, code blocks, equation, Mermaid diagram, citation, footnote, mobile layout, and Giscus configuration.
+Then inspect the homepage, writing listing, series page, all series chapters, previous/next navigation, code blocks in both themes, equation, Mermaid diagram, citation, footnote, mobile layout, and Giscus configuration.

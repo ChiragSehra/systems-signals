@@ -1,0 +1,635 @@
+---
+title: "Why Dynamic AI Systems Break in Two Different Directions"
+description: "Why extensible AI runtimes need both reversible changes and reactive dependency lifecycles."
+date: 2026-08-17
+author: "Chirag Sehra"
+categories:
+  - Agents
+  - Systems
+  - Distributed Systems
+series: "Spatiotemporal Composability"
+series_order: 1
+draft: false
+---
+
+Modern AI systems are becoming less like single programs and more like small operating environments.
+
+An agent may have an LLM provider, tool registry, MCP servers, filesystem layer, sandbox, memory backend, session store and an agent loop. More importantly, these pieces may not remain fixed for the entire lifetime of the process.
+
+An MCP server can disappear.
+
+A model adapter can be replaced.
+
+A new tool can be installed.
+
+A memory backend can reconnect.
+
+An agent may even modify the software environment in which it runs.
+
+DeepSeek Harness makes this architectural problem concrete. Its architecture uses Cordis as the plugin framework underneath the harness, with services and capabilities composed through a shared context rather than a permanently privileged monolithic core.[@deepseekHarness2026]
+
+The programming-language paper behind Cordis, *A Programming Paradigm for Spatiotemporal Composability*, asks a deeper question:
+
+> **What properties would a programming model need if components could be added, removed and replaced while the program stays alive?**
+
+The paper identifies two orthogonal problems:
+
+- **Temporal composability:** Can a component be removed without leaving its modifications behind?
+- **Spatial composability:** Can a component declare what it depends on and react correctly when those dependencies appear, disappear or change?
+
+It addresses these using **revertible effects** and **reactive coeffects**, then combines both into a component lifecycle model and develops system-level results for dynamic composition.[@cordiverse2026]
+
+This series explains those ideas for engineers building LLM systems, agent runtimes and extensible infrastructure.
+
+We will use the same small Python runtime throughout:
+
+```text
+Agent Runtime
+│
+├── LLM Provider
+├── Tool Registry
+├── MCP Plugin
+├── Memory
+├── Sandbox
+└── Agent Loop
+```
+
+The Python code is pedagogical. It is not a Python port of Cordis.
+
+Each part also uses operating-system concepts as comparison points. These analogies are useful because most engineers already understand process lifetime, resource ownership, device dependencies and lifecycle races. However, the analogies are not equivalences. Wherever an OS comparison stops matching the paper, we will say so explicitly.
+
+## The two dimensions at a glance
+
+The shortest mental model is: **temporal composability asks whether a component leaves residue; spatial composability asks whether it should be running at all.**
+
+<div class="responsive-diagram" role="img" aria-label="A two by two matrix comparing reversible and non-reversible runtime changes with dependency-aware and dependency-unaware components.">
+<svg viewBox="0 0 820 470" xmlns="http://www.w3.org/2000/svg" aria-labelledby="part-one-matrix-title part-one-matrix-desc">
+  <title id="part-one-matrix-title">Temporal and spatial composability</title>
+  <desc id="part-one-matrix-desc">The useful design target is both reversible effects and dependency-aware lifecycles.</desc>
+  <rect class="diagram-surface" x="180" y="70" width="560" height="310" rx="8"/>
+  <line class="diagram-line" x1="460" y1="70" x2="460" y2="380"/>
+  <line class="diagram-line" x1="180" y1="225" x2="740" y2="225"/>
+  <text class="diagram-title" x="460" y="34" text-anchor="middle">Two independent questions</text>
+  <text class="diagram-muted" x="460" y="422" text-anchor="middle">dependency-aware lifecycle →</text>
+  <text class="diagram-muted" x="120" y="230" text-anchor="middle" transform="rotate(-90 120 230)">reversible effects →</text>
+  <text class="diagram-label" x="320" y="112" text-anchor="middle">Clean removal</text>
+  <text class="diagram-muted" x="320" y="140" text-anchor="middle">but hidden dependencies</text>
+  <text class="diagram-label" x="600" y="112" text-anchor="middle">Composable runtime</text>
+  <text class="diagram-muted" x="600" y="140" text-anchor="middle">the target design</text>
+  <text class="diagram-label" x="320" y="267" text-anchor="middle">Cleanup by hope</text>
+  <text class="diagram-muted" x="320" y="295" text-anchor="middle">and hidden startup order</text>
+  <text class="diagram-label" x="600" y="267" text-anchor="middle">Declared dependencies</text>
+  <text class="diagram-muted" x="600" y="295" text-anchor="middle">but residue on removal</text>
+  <circle class="diagram-accent" cx="600" cy="170" r="8"/>
+  <text class="diagram-muted" x="600" y="350" text-anchor="middle">revertible + reactive</text>
+</svg>
+</div>
+
+```{mermaid}
+flowchart LR
+  T["Temporal: what did I change?"] --> U["Own the effect lifetime"]
+  S["Spatial: what do I need?"] --> V["React to dependency changes"]
+  U --> W["Composable component"]
+  V --> W
+```
+
+---
+
+
+## Installing a Plugin Is Easy. Removing It Correctly Is Not.
+
+Suppose you are building a small agent runtime.
+
+The first version may look completely reasonable:
+
+```python
+class Runtime:
+    def __init__(self):
+        self.services = {}
+        self.tools = {}
+        self.hooks = []
+
+    def register_service(self, name, service):
+        self.services[name] = service
+
+    def register_tool(self, name, tool):
+        self.tools[name] = tool
+
+    def register_hook(self, hook):
+        self.hooks.append(hook)
+```
+
+Now we add an LLM provider:
+
+```python
+class DeepSeekProvider:
+    async def complete(self, messages):
+        ...
+```
+
+and install it:
+
+```python
+runtime.register_service("llm", DeepSeekProvider())
+```
+
+Then we add a search plugin:
+
+```python
+def install_search_plugin(runtime):
+    runtime.register_tool("web_search", web_search)
+    runtime.register_hook(log_search_result)
+```
+
+Everything works.
+
+The agent can call the model and use search.
+
+The interesting problem begins when we ask:
+
+```python
+uninstall_search_plugin(runtime)
+```
+
+What exactly should that operation do?
+
+It has to remove:
+
+```text
+web_search from the tool registry
+log_search_result from the hook registry
+any timers created by the plugin
+any event listeners created by the plugin
+any child components started by the plugin
+any services exposed by the plugin
+```
+
+If the plugin changed ten runtime structures, its cleanup path needs to remember all ten.
+
+That is already uncomfortable.
+
+Now add another requirement:
+
+> Replace the LLM provider without restarting the agent process.
+
+Our runtime currently has:
+
+```python
+agent_loop.llm = runtime.services["llm"]
+```
+
+Suppose the agent loop stores that reference during startup.
+
+Then we replace:
+
+```python
+runtime.services["llm"] = AnotherProvider()
+```
+
+The runtime says the provider changed.
+
+The agent loop may still be using the old provider.
+
+We now have two different categories of failure.
+
+---
+
+## Problem 1: What Did the Component Change?
+
+Imagine that installing plugin `search` creates this state:
+
+```text
+Before
+
+Tools:
+  read_file
+
+Hooks:
+  on_message
+
+
+After search plugin
+
+Tools:
+  read_file
+  web_search
+
+Hooks:
+  on_message
+  log_search_result
+```
+
+Removing `search` should ideally produce exactly:
+
+```text
+Tools:
+  read_file
+
+Hooks:
+  on_message
+```
+
+This is a **time problem**.
+
+The component existed during a particular interval:
+
+```text
+─────────┬──────────────────────────┬─────────>
+         load                    unload
+```
+
+During that interval, it modified the environment.
+
+Once its lifetime ends, we want its contribution removed.
+
+The Cordis paper calls this dimension **temporal composability**: the ability to completely revert a component's side effects upon removal.[@cordiverse2026]
+
+---
+
+## Problem 2: What Does the Component Need?
+
+Now consider our agent loop:
+
+```python
+class AgentLoop:
+    requires = {
+        "llm",
+        "tools",
+        "sessions",
+    }
+```
+
+It should not become active when only this exists:
+
+```text
+LLM       ✓
+Tools     ✓
+Sessions  ✗
+```
+
+More importantly, if `sessions` disappears later, the runtime must react.
+
+This is a **space problem**.
+
+The component occupies a position in a dependency graph:
+
+```text
+          LLM
+           │
+           ▼
+Tools ──► Agent Loop ◄── Sessions
+```
+
+The paper calls this **spatial composability**: dependencies are declared and reactively managed rather than hidden inside arbitrary startup code.[@cordiverse2026]
+
+---
+
+## Why These Problems Are Orthogonal
+
+A system can solve one without solving the other.
+
+### Perfect cleanup, bad dependencies
+
+Imagine every plugin has perfect undo logic:
+
+```python
+dispose = install_plugin()
+dispose()
+```
+
+After disposal, nothing leaks.
+
+Great.
+
+But the agent loop still starts before its LLM provider exists.
+
+Temporal composability is good.
+
+Spatial composability is bad.
+
+### Perfect dependency injection, bad cleanup
+
+Now imagine a sophisticated dependency-injection framework:
+
+```python
+agent = AgentLoop(
+    llm=container.resolve("llm"),
+    tools=container.resolve("tools")
+)
+```
+
+Dependencies are clear.
+
+But unloading `AgentLoop` leaves behind:
+
+```text
+event listeners
+registered tools
+callbacks
+timers
+child services
+```
+
+Spatial composition may be structured.
+
+Temporal composition is still broken.
+
+Separating these two dimensions is one of the most useful ideas in the paper.
+
+---
+
+## Worked Example: Breaking an Agent Runtime
+
+Let us intentionally build a bad plugin system.
+
+```python
+class Runtime:
+    def __init__(self):
+        self.services = {}
+        self.tools = {}
+        self.hooks = []
+
+    def emit(self, event):
+        for hook in self.hooks:
+            hook(event)
+```
+
+Our search plugin:
+
+```python
+class SearchPlugin:
+    def load(self, runtime):
+        runtime.tools["web_search"] = self.search
+        runtime.hooks.append(self.on_event)
+
+    def search(self, query):
+        return f"results for {query}"
+
+    def on_event(self, event):
+        print("search event:", event)
+```
+
+Install it:
+
+```python
+plugin = SearchPlugin()
+plugin.load(runtime)
+```
+
+Now suppose we remove our Python reference:
+
+```python
+del plugin
+```
+
+Did the plugin disappear?
+
+No.
+
+The runtime still contains references in:
+
+```python
+runtime.tools["web_search"]
+runtime.hooks
+```
+
+The module's **logical lifetime** has ended, but its **effects have not**.
+
+Dynamic composition needs a stronger relationship between lifetime and state.
+
+---
+
+## OS Analogy 1: Process Cleanup
+
+Operating systems already teach engineers an important lesson:
+
+> **Lifetime and resources should be connected.**
+
+When a process terminates, the operating system closes resources such as file descriptors associated with that process.[@linuxExit]
+
+Conceptually:
+
+```text
+Process
+│
+├── fd 3
+├── fd 4
+└── fd 5
+
+Process exits
+     │
+     ▼
+
+Kernel releases process-owned descriptors
+```
+
+The process does not need to leave behind an application-level list saying:
+
+```text
+please close fd 3
+please close fd 4
+please close fd 5
+```
+
+Ownership gives the system enough structure to perform some cleanup.
+
+That is a useful intuition for Cordis:
+
+> Runtime resources created during a component's lifetime should be associated with that lifetime.
+
+### Where the analogy breaks
+
+Suppose a process does this:
+
+```python
+with open("config.txt", "w") as f:
+    f.write("new configuration")
+```
+
+When the process exits, the file descriptor is closed.
+
+But the filesystem does not restore the old file contents.
+
+So:
+
+```text
+resource release
+        ≠
+state reversal
+```
+
+The operating system can release resources whose ownership it knows.
+
+The Cordis paper asks for something stronger inside the managed context:
+
+> Can context transformations themselves carry enough information to be reversed?
+
+That leads to **revertible effects**.
+
+---
+
+## OS Analogy 2: Driver Dependencies
+
+Linux device links provide a useful analogy for the spatial side.
+
+The Linux driver core can represent relationships between a **supplier** device and a **consumer** device, including ordering constraints around probing and unbinding.[@linuxDeviceLinks]
+
+Conceptually:
+
+```text
+Supplier
+   │
+   ▼
+Consumer
+```
+
+Compare this to an AI runtime:
+
+```text
+LLM Provider
+     │
+     ▼
+Agent Loop
+```
+
+or:
+
+```text
+MCP Transport
+     │
+     ▼
+MCP Tool Adapter
+```
+
+A consumer should not pretend to be active when the capability it requires does not exist.
+
+That is a useful mental model for reactive dependencies.
+
+### Where the analogy breaks
+
+Linux device-link machinery solves particular kernel lifecycle problems.
+
+It does not automatically provide the paper's general reversible-effect model, effect independence or system-level composability results.
+
+---
+
+## Why This Matters More for AI Runtimes
+
+Traditional applications often assume their architecture is fixed between process start and exit.
+
+Agent runtimes increasingly challenge that assumption.
+
+Consider a long-running session:
+
+```text
+09:00  Agent starts with Model A
+09:07  MCP filesystem server appears
+09:14  Search plugin is installed
+09:31  Model A is replaced by Model B
+09:44  Search plugin is upgraded
+10:02  MCP filesystem server disappears
+10:08  MCP filesystem server reconnects
+```
+
+Restarting the entire process after every change is possible.
+
+But it gives up dynamic composition.
+
+A runtime that genuinely supports change needs answers to four questions:
+
+```text
+1. What did this component change?
+
+2. How do I undo only those changes?
+
+3. What dependencies does this component require?
+
+4. What happens when those dependencies change while it is alive?
+```
+
+The first two belong primarily to the temporal dimension.
+
+The last two belong primarily to the spatial dimension.
+
+The paper's basic thesis is that both should become part of the programming model.[@cordiverse2026]
+
+---
+
+## DeepSeek Harness Makes the Problem Concrete
+
+DeepSeek Harness uses Cordis as its runtime composition substrate. The official repository describes the harness as a plugin-based architecture powered by Cordis.[@deepseekHarness2026]
+
+The mental model is closer to:
+
+```text
+             Cordis Context
+                   │
+      ┌────────────┼─────────────┐
+      │            │             │
+      ▼            ▼             ▼
+    Model         Tools       Sessions
+      │            │             │
+      └────────────┼─────────────┘
+                   ▼
+               Agent Loop
+```
+
+than:
+
+```text
+       Permanent Agent Core
+              │
+              ├── optional plugin
+              ├── optional plugin
+              └── optional plugin
+```
+
+If central capabilities are dynamically composable, lifecycle correctness stops being an edge case.
+
+It becomes architectural.
+
+---
+
+## The Mental Model to Keep
+
+### Temporal composability
+
+```text
+Component A enters
+        │
+        ▼
+changes shared context
+        │
+        ▼
+Component A leaves
+        │
+        ▼
+A's contribution disappears
+```
+
+### Spatial composability
+
+```text
+A requires B
+
+B absent
+   │
+   ▼
+A inactive
+
+B appears
+   │
+   ▼
+A activates
+
+B disappears
+   │
+   ▼
+A deactivates
+```
+
+The next four parts make these diagrams progressively more precise.
+
+---
+
+Next: [Revertible Effects — Making Runtime Changes Undoable](../part-2-revertible-effects/index.qmd)

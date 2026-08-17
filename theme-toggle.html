@@ -1,0 +1,30 @@
+<button class="theme-toggle" type="button" aria-label="Switch to dark mode" aria-pressed="false">
+  <span class="theme-toggle-icon" aria-hidden="true">☾</span>
+  <span class="theme-toggle-label">Dark mode</span>
+</button>
+<script>
+(() => {
+  const root = document.documentElement;
+  const button = document.querySelector('.theme-toggle');
+  const nav = document.querySelector('.navbar .quarto-navbar-tools') || document.querySelector('.navbar .container-fluid') || document.querySelector('.navbar .navbar-nav:last-child');
+  const storedTheme = window.localStorage.getItem('systems-signals-theme');
+  const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  const setTheme = (theme) => {
+    root.dataset.theme = theme;
+    const dark = theme === 'dark';
+    document.body.classList.toggle('quarto-dark', dark);
+    document.body.classList.toggle('quarto-light', !dark);
+    button.setAttribute('aria-pressed', String(dark));
+    button.setAttribute('aria-label', dark ? 'Switch to light mode' : 'Switch to dark mode');
+    button.querySelector('.theme-toggle-icon').textContent = dark ? '☀' : '☾';
+    button.querySelector('.theme-toggle-label').textContent = dark ? 'Light mode' : 'Dark mode';
+  };
+  if (nav) nav.appendChild(button);
+  setTheme(storedTheme || systemTheme);
+  button.addEventListener('click', () => {
+    const nextTheme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+    window.localStorage.setItem('systems-signals-theme', nextTheme);
+    setTheme(nextTheme);
+  });
+})();
+</script>
