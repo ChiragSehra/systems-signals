@@ -5,20 +5,10 @@ page-layout: full
 comments: false
 ---
 
-Some problems are easier to understand as a sequence. Series collect related essays while keeping every chapter readable on its own.
-
-## Agent Systems
-
-An introduction to designing agent runtimes around explicit state, reversible effects, and observable transitions.
-
-1. [Reversible Agent Systems](posts/reversible-agent-systems/index.qmd) — why rollback is a design primitive, not merely an error handler.
-
-## LLM Systems
-
-More chapters will be added as the notes develop.
+No series have been published yet. When a set of articles belongs together, add matching `series` and `series_order` fields to their frontmatter and list the reading order here.
 
 ::: {.callout-note}
 ### Reading order
 
-Standalone writing does not require sequential reading. Start with whatever question is closest to the system you are building.
+This page will become the entry point for future multi-part writing. Standalone articles will remain independently readable.
 :::
