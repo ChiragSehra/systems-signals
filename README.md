@@ -72,6 +72,8 @@ draft: false
 ---
 ```
 
+Because the site starts with no articles, the homepage and writing page currently show an empty state. When you add the first article, restore the generated listing blocks from the project history or ask Codex to enable the Quarto listing for `posts`; after that, future articles will appear automatically.
+
 Use one page title from frontmatter, then begin the body with `##` sections. Use fenced code blocks with a language, standard Quarto math syntax, Mermaid for simple diagrams, meaningful image alt text, Markdown tables, callouts, footnotes, and citations where they help the reader inspect the argument.
 
 Set `draft: true` while developing an article. The safest publication check is to run `quarto render` and inspect the listing before pushing.

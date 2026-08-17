@@ -5,6 +5,4 @@ page-layout: full
 comments: false
 ---
 
-No articles published yet. Create a new article under `posts/<slug>/index.qmd`; Quarto will add it to this page after the next render.
-
-When articles exist, this page can be switched back to a generated listing and RSS feed.
+No articles published yet. Create a new article under `posts/<slug>/index.qmd`; when the first article is added, restore the generated listing configuration described in `README.md`.
