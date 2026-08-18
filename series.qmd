@@ -12,8 +12,8 @@ The programming model behind dynamic AI runtimes: reversible effects, reactive d
 Read in order:
 
 1. [Why Dynamic AI Systems Break in Two Different Directions](posts/spatiotemporal-composability/part-1-dynamic-ai-systems/index.qmd)
-2. [Revertible Effects — Making Runtime Changes Undoable](posts/spatiotemporal-composability/part-2-revertible-effects/index.qmd)
-3. [Reactive Coeffects — Dependencies That Control Component Lifetime](posts/spatiotemporal-composability/part-3-reactive-coeffects/index.qmd)
+2. [Revertible Effects: Making Runtime Changes Undoable](posts/spatiotemporal-composability/part-2-revertible-effects/index.qmd)
+3. [Reactive Coeffects: Dependencies That Control Component Lifetime](posts/spatiotemporal-composability/part-3-reactive-coeffects/index.qmd)
 4. [Async Reloads, Epochs and the Race You Probably Missed](posts/spatiotemporal-composability/part-4-async-reloads-and-epochs/index.qmd)
 5. [From Clever Plugin Runtime to Programming Paradigm](posts/spatiotemporal-composability/part-5-programming-paradigm/index.qmd)
 

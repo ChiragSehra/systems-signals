@@ -26,7 +26,7 @@ A memory backend can reconnect.
 
 An agent may even modify the software environment in which it runs.
 
-DeepSeek Harness makes this architectural problem concrete. Its architecture uses Cordis as the plugin framework underneath the harness, with services and capabilities composed through a shared context rather than a permanently privileged monolithic core.[@deepseekHarness2026]
+DeepSeek Harness makes this architectural problem concrete: it uses Cordis as the plugin framework, with services and capabilities composed through a shared context rather than a permanently privileged monolithic core.[@deepseekHarness2026]
 
 The programming-language paper behind Cordis, *A Programming Paradigm for Spatiotemporal Composability*, asks a deeper question:
 
@@ -338,7 +338,7 @@ Separating these two dimensions is one of the most useful ideas in the paper.
 
 ---
 
-## Worked Example: Breaking an Agent Runtime
+## Example: Breaking an Agent Runtime
 
 Let us intentionally build a bad plugin system.
 
@@ -399,7 +399,7 @@ Dynamic composition needs a stronger relationship between lifetime and state.
 
 ---
 
-## OS Analogy 1: Process Cleanup
+## Relatable Example: Process Cleanup
 
 Operating systems already teach engineers an important lesson:
 
@@ -437,7 +437,7 @@ That is a useful intuition for Cordis:
 
 > Runtime resources created during a component's lifetime should be associated with that lifetime.
 
-### Where the analogy breaks
+### Limits of the Comparison
 
 Suppose a process does this:
 
@@ -468,7 +468,7 @@ That leads to **revertible effects**.
 
 ---
 
-## OS Analogy 2: Driver Dependencies
+## Relatable Example: Driver Dependencies
 
 Linux device links provide a useful analogy for the spatial side.
 
@@ -505,7 +505,7 @@ A consumer should not pretend to be active when the capability it requires does 
 
 That is a useful mental model for reactive dependencies.
 
-### Where the analogy breaks
+### Limits of the Comparison
 
 Linux device-link machinery solves particular kernel lifecycle problems.
 
@@ -632,4 +632,4 @@ The next four parts make these diagrams progressively more precise.
 
 ---
 
-Next: [Revertible Effects — Making Runtime Changes Undoable](../part-2-revertible-effects/index.qmd)
+Next: [Revertible Effects: Making Runtime Changes Undoable](../part-2-revertible-effects/index.qmd)

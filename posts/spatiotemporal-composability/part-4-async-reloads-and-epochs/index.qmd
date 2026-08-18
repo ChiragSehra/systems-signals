@@ -106,7 +106,7 @@ Think of it as a dependency fingerprint.
 
 ---
 
-## Worked Example: Dependency Epochs
+## Example: Dependency Epochs
 
 Our component requires:
 
@@ -227,7 +227,7 @@ DeepSeek Harness's current client HMR documentation explicitly notes that depend
 
 ---
 
-## Worked Example: The MCP Race
+## Example: The MCP Race
 
 ```{mermaid}
 sequenceDiagram
@@ -411,7 +411,7 @@ reload C
 
 Now lifecycle transitions race with one another.
 
-A stronger design serialises state migration: while a transition is in progress, newer desired states are remembered and reconciled after the current transition reaches a safe boundary.
+A stronger design runs state migrations one at a time. If a newer target arrives during a transition, the system remembers it and handles it after the current transition reaches a safe boundary.
 
 Conceptually:
 
@@ -445,7 +445,7 @@ reload ──────┘
 
 ---
 
-## OS Analogy 1: Device Lifecycle Transitions
+## Relatable Example: Device Lifecycle Transitions
 
 Kernel device lifecycle operations are not instantaneous. Probe, suspend, resume, bind and unbind can have ordering and concurrency constraints.[@linuxDeviceLinks]
 
@@ -477,7 +477,7 @@ Cordis brings similar concerns into component composition.
 
 ---
 
-## OS Analogy 2: TOCTOU
+## Relatable Example: TOCTOU
 
 There is also a resemblance to a time-of-check/time-of-use problem.
 
@@ -513,7 +513,7 @@ I started against configuration N.
 Am I still completing against configuration N?
 ```
 
-The analogy is useful, but an epoch in Cordis is a lifecycle/dependency mechanism rather than a generic TOCTOU primitive.
+The analogy is useful, but an epoch in Cordis is a lifecycle and dependency tool, not a general-purpose check-then-use tool.
 
 ---
 
@@ -561,6 +561,6 @@ That limitation becomes very important in the final security discussion.
 
 ---
 
-[Previous: Reactive Coeffects — Dependencies That Control Component Lifetime](../part-3-reactive-coeffects/index.qmd) · [Next: From Clever Plugin Runtime to Programming Paradigm](../part-5-programming-paradigm/index.qmd)
+[Previous: Reactive Coeffects: Dependencies That Control Component Lifetime](../part-3-reactive-coeffects/index.qmd) · [Next: From Clever Plugin Runtime to Programming Paradigm](../part-5-programming-paradigm/index.qmd)
 
 ---

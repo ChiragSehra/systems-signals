@@ -1,5 +1,5 @@
 ---
-title: "Reactive Coeffects — Dependencies That Control Component Lifetime"
+title: "Reactive Coeffects: Dependencies That Control Component Lifetime"
 description: "How components declare what they need and react when runtime dependencies change."
 date: 2026-08-17
 author: "Chirag Sehra"
@@ -107,7 +107,7 @@ For a basic list of required services, satisfaction means all required keys are 
 
 ---
 
-## Worked Example: A Reactive Dependency Runtime
+## Example: A Reactive Dependency Runtime
 
 ```python
 class Runtime:
@@ -204,7 +204,7 @@ Effects and coeffects have started to work together.
 
 ---
 
-## Worked Lifecycle
+## Example: Component Lifecycle
 
 Suppose the agent requires:
 
@@ -360,7 +360,7 @@ This case becomes the central problem of Part 4.
 
 ---
 
-## OS Analogy: Linux Supplier and Consumer Devices
+## Relatable Example: Linux Supplier and Consumer Devices
 
 Linux device links provide a strong mental model here.
 
@@ -406,13 +406,13 @@ The useful intuition is:
 
 > A consumer should not be operational while a required provider is unavailable.
 
-### Where the analogy breaks
+### Limits of the Comparison
 
 Linux device links are not a general effect/coeffect calculus.
 
 Cordis combines dependency-driven lifetimes with reversible effects, context scoping, replacement and runtime composition.
 
-The analogy helps us understand **why dependencies should participate in lifecycle**. It does not reproduce the paper's formal semantics.
+The analogy explains why dependencies should participate in lifecycle, but it does not capture the paper's full model.
 
 ---
 
@@ -527,7 +527,7 @@ B inactive because A absent
 
 Nothing starts.
 
-This is not the same as a traditional mutex deadlock, but it has the same practical smell: a cyclic dependency structure prevents progress.
+This is not the same as a traditional mutex deadlock, but it has a similar practical failure mode: a dependency cycle prevents progress.
 
 A common architectural response is decomposition.
 
@@ -553,4 +553,4 @@ The dependency relation becomes acyclic.
 
 ---
 
-[Previous: Revertible Effects — Making Runtime Changes Undoable](../part-2-revertible-effects/index.qmd) · [Next: Async Reloads, Epochs and the Race You Probably Missed](../part-4-async-reloads-and-epochs/index.qmd)
+[Previous: Revertible Effects: Making Runtime Changes Undoable](../part-2-revertible-effects/index.qmd) · [Next: Async Reloads, Epochs and the Race You Probably Missed](../part-4-async-reloads-and-epochs/index.qmd)

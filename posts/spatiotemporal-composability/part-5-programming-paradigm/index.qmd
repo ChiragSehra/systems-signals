@@ -1,6 +1,6 @@
 ---
 title: "From Clever Plugin Runtime to Programming Paradigm"
-description: "How Cordis combines effects, coeffects, coherence, confluence, and recovery guarantees."
+description: "How Cordis combines reversible changes, dependencies, consistency, and safe recovery."
 date: 2026-08-17
 author: "Chirag Sehra"
 categories:
@@ -44,9 +44,9 @@ many interleaved components
 
 ---
 
-## The Unified Context
+## One Shared Context
 
-The paper combines effect and coeffect information into a unified recursive context model.[@cordiverse2026]
+The paper combines effect and coeffect information into a single recursive model of the context.[@cordiverse2026]
 
 The engineering interpretation is:
 
@@ -60,7 +60,7 @@ Context
 
 The point is not merely that these tables happen to live in one object.
 
-The point is that context mutation, recovery and dependency resolution participate in one lifecycle model.
+The point is that context changes, recovery, and dependency resolution follow one lifecycle model.
 
 ---
 
@@ -141,7 +141,7 @@ That is where the paper's system-level reasoning becomes valuable.
 
 ---
 
-## Recovery Exactness
+## Exact Recovery
 
 Return to:
 
@@ -178,7 +178,7 @@ Engineering translation:
 
 ---
 
-## Worked Example: Independent Tool Contributions
+## Example: Independent Tool Contributions
 
 Start:
 
@@ -227,7 +227,7 @@ The goal is to make the first behaviour structural rather than accidental.
 
 ---
 
-## Provider/Consumer Ordering
+## Who Must Start First
 
 Suppose:
 
@@ -262,11 +262,11 @@ remove provider
 consumer continues using stale dependency
 ```
 
-This resembles Linux supplier/consumer lifecycle ordering, but the paper integrates such ordering into its own dynamic component semantics.[@cordiverse2026; @linuxDeviceLinks]
+This resembles Linux supplier/consumer lifecycle ordering, but the paper builds that ordering into its dynamic component model.[@cordiverse2026; @linuxDeviceLinks]
 
 ---
 
-## Resolution Coherence
+## Keeping Dependencies Consistent
 
 Suppose startup begins with:
 
@@ -346,7 +346,7 @@ A → B
 
 A dependency cycle can prevent a valid activation order.
 
-This is why acyclicity assumptions matter when reasoning about eventual quiescence.
+This is why a dependency graph should be acyclic if the system is expected to settle.
 
 Engineering translation:
 
@@ -354,7 +354,7 @@ Engineering translation:
 
 ---
 
-## Confluence
+## When Order Should Not Matter
 
 This is one of the most interesting ideas.
 
@@ -392,7 +392,7 @@ The question is:
 
 > Do both valid histories converge to an equivalent stable runtime configuration?
 
-That is the intuition behind confluence in this setting.
+That is the idea of reaching the same result even when the steps happen in a different order.
 
 Conceptually:
 
@@ -416,7 +416,7 @@ under the model's assumptions.[@cordiverse2026]
 
 ---
 
-## Why Confluence Matters for Agent Runtimes
+## Why This Matters for Agent Runtimes
 
 Long-running AI systems accumulate history.
 
@@ -470,7 +470,7 @@ Spatiotemporal composability is trying to control that unwanted history dependen
 
 ---
 
-## OS Analogy: Reboot Versus Correct Hot Reconfiguration
+## Relatable Example: Reboot Versus Correct Hot Reconfiguration
 
 Suppose a system behaves incorrectly after repeated driver loading and unloading but works after reboot.
 
@@ -490,13 +490,13 @@ hot reconfiguration
 
 whose stable result agrees with clean construction.
 
-That is a useful intuition for confluence.
+That is a useful way to think about reaching the same result from different valid paths.
 
-But an operating system as a whole is not thereby formally confluent. The analogy is about the engineering goal.
+An operating system is not guaranteed to behave this way; the analogy only captures the engineering goal.
 
 ---
 
-## From Paper to Cordis
+## From the Paper to Cordis
 
 A simplified conceptual mapping is:
 
@@ -519,26 +519,26 @@ DeepSeek Harness then uses Cordis as the architectural substrate for its plugin 
 
 ---
 
-## DeepSeek Harness Runtime Invariants
+## DeepSeek Harness Runtime Safety Checks
 
-DeepSeek Harness also contains a useful complementary idea: package-owned runtime invariants.
+DeepSeek Harness also contains a useful related idea: package-owned runtime safety checks.
 
-Its architecture notes describe `dsh-invariants` as a service that manages invariant registration, child-fiber lifecycle, rollback, disposal and package-attributed failures. Individual packages install checks over their relevant mutable state or event protocols.[@deepseekInvariants2026]
+Its architecture notes describe `dsh-invariants` as a service that manages checks, child-fiber lifecycle, rollback, disposal, and package-attributed failures. Individual packages install checks over the state and events they own.[@deepseekInvariants2026]
 
 Examples include checks for:
 
 - strict session sequence growth;
 - valid agent lifecycle transitions;
 - LLM stream grammar;
-- monotonic tool execution stages;
+- tool stages that only move forward;
 - immutable final tool execution/result snapshots;
-- durable goal revision and provenance relationships.[@deepseekInvariants2026]
+- durable goal revisions and links showing where goals came from.[@deepseekInvariants2026]
 
-This is not the same thing as the paper's formal metatheory.
+This is not the same as the paper's formal theory.
 
 However, it points toward an important practical lesson:
 
-> Dynamic composition benefits from both lifecycle semantics **and runtime invariants that detect when the implementation violates its intended contracts**.
+> Dynamic composition benefits from both lifecycle rules **and runtime checks that detect when the implementation breaks its promises**.
 
 That distinction becomes crucial when we ask whether a self-editing harness can safely learn from, modify and roll back its own state.
 
@@ -599,7 +599,7 @@ That distinction becomes crucial when we ask whether a self-editing harness can 
 
 ---
 
-## What an AI Engineer Should Take Away
+## Core Engineering Takeaway
 
 The easiest way to misunderstand this paper is to think it proposes a fancy plugin loader.
 
@@ -656,7 +656,7 @@ Those are increasingly ordinary AI-infrastructure questions.
 
 ---
 
-## Final Discussion: If Rollback Erases Effects, How Does the System Learn?
+## Beyond the Core Model: Learning and Self-Editing
 
 This is the question I think naturally follows from the paper.
 
@@ -691,13 +691,13 @@ But it means we should stop treating all state as one category.
 
 ---
 
-## Runtime Reversibility and Learning Want Different Kinds of History
+## Runtime State and Learned Memory Have Different Lifetimes
 
 For composability, we want unwanted runtime history to disappear.
 
-For learning, we want useful epistemic history to survive.
+For learning, we want useful history about what the system learned to survive.
 
-That means a self-improving runtime should probably not model its total state as a single undifferentiated $\Gamma$.
+That means a self-improving runtime should probably not model its total state as one undivided value $\Gamma$.
 
 A more useful engineering model is:
 
@@ -711,7 +711,7 @@ where:
 - $K$ is **durable knowledge or memory state**;
 - $A$ is an **append-only audit/security history**.
 
-These states intentionally have different lifecycle semantics.
+These states intentionally follow different lifecycle rules.
 
 ### Runtime state $R$
 
@@ -763,7 +763,7 @@ This history should generally be harder to delete than either runtime or ordinar
 
 ---
 
-## The Important Consequence: Full-State Confluence and Learning Are in Tension
+## The Key Problem: Runtime Rollback and Learning Pull Apart
 
 This is the subtle point.
 
@@ -799,7 +799,7 @@ Therefore we do **not** actually want complete history independence across all s
 
 We want something closer to:
 
-> **Structural confluence, with intentional epistemic history.**
+> **The same runtime structure, with an intentional history of learning.**
 
 In symbols, if:
 
@@ -823,7 +823,7 @@ That distinction is, in my view, essential.
 
 The cleanest answer is **ownership transfer**.
 
-An ephemeral component should not directly make its own temporary state permanent.
+A temporary component should not directly make its own temporary state permanent.
 
 Instead it should propose a learning event to a longer-lived memory authority.
 
@@ -936,24 +936,24 @@ memory.propose(candidate)
 The memory service can:
 
 ```text
-check provenance
+check origin
 check evidence
 check policy
 deduplicate
 assign a revision
-commit atomically
+commit as one step
 append an audit record
 ```
 
-Once committed, the knowledge record is no longer owned by the ephemeral plugin.
+Once committed, the knowledge record is no longer owned by the temporary plugin.
 
 This is how learning can survive rollback without simply becoming untracked residue.
 
 ---
 
-## But Persistent Memory Alone Does Not Give a Guarantee
+## Persistent Memory Alone Is Not Safe
 
-This is the second important point in your question.
+This is the second important point.
 
 We could simply say:
 
@@ -993,13 +993,13 @@ A clean runtime can therefore continue making bad decisions.
 
 This means:
 
-> **Rollback of executable state without provenance-aware rollback or quarantine of learned state can preserve the consequences of the very component you intended to remove.**
+> **Rolling back executable state without checking or quarantining learned state can preserve the consequences of the component being removed.**
 
 That is a major security consideration for self-editing harnesses.
 
 ---
 
-## Learning Needs Provenance
+## Learning Needs a Traceable History
 
 Every durable learned record should ideally answer:
 
@@ -1034,7 +1034,7 @@ For example:
 }
 ```
 
-Now a rollback can reason about causal history.
+Now a rollback can reason about what caused each memory record.
 
 If component version:
 
@@ -1060,7 +1060,7 @@ until they are independently revalidated.
 
 A self-editing harness may eventually need to distinguish:
 
-## Runtime rollback
+### Runtime rollback
 
 Restore:
 
@@ -1075,9 +1075,9 @@ event hooks
 
 to a known-good version.
 
-## Epistemic rollback or quarantine
+### Learning rollback or quarantine
 
-Find durable knowledge whose provenance depends on the bad runtime version and prevent it from influencing future behaviour until revalidated.
+Find knowledge linked to the bad version and stop it influencing future behaviour until it is checked again.
 
 Conceptually:
 
@@ -1096,11 +1096,11 @@ restore runtime to v16
 leave every thing v17 learned fully trusted
 ```
 
-The second system can be operationally reverted while semantically remaining compromised.
+The second system can have its runtime restored while remaining compromised.
 
 ---
 
-## If Rollback Logs Are Part of the Security Model, They Must Be Outside the Agent's Trust Boundary
+## Keep Recovery Outside the Agent's Control Boundary
 
 Now consider a self-editing harness.
 
@@ -1137,7 +1137,7 @@ A self-editing agent should not have unrestricted authority over its own recover
 
 ---
 
-## The Inverse Can Drift
+## The Undo Rule Can Drift
 
 There is another subtle failure mode.
 
@@ -1238,7 +1238,7 @@ A self-editing harness needs both if it wants strong safety guarantees.
 
 I would separate the mechanism into at least five protected pieces.
 
-## 1. Immutable version identity
+### 1. Immutable version identity
 
 Every deployed component should have an immutable content identity:
 
@@ -1267,7 +1267,7 @@ Hashes do not.
 
 ---
 
-## 2. Write-ahead rollback records
+### 2. Write-ahead rollback records
 
 Before applying a self-edit, record enough information to recover.
 
@@ -1313,11 +1313,11 @@ A rollback record might include:
 
 This is conceptually similar to the reason databases use write-ahead or versioned recovery information.
 
-The record must exist before the risky transition is allowed to become authoritative.
+The record must exist before the risky transition is allowed to become official.
 
 ---
 
-## 3. A recovery executor outside the self-modifiable domain
+### 3. A recovery executor outside the self-modifiable domain
 
 The agent can propose:
 
@@ -1342,7 +1342,7 @@ If the self-editing model can rewrite it, the model can remove the guarantee.
 
 ---
 
-## 4. Versioned persistent state
+### 4. Versioned persistent state
 
 Durable memory should have explicit revisions.
 
@@ -1372,7 +1372,7 @@ checkpoint
 ordered commit log
 ```
 
-This gives recoverability and provenance.
+This gives recovery and source tracking.
 
 It still does not tell us whether the learned fact is **true**.
 
@@ -1380,7 +1380,7 @@ That requires validation policy.
 
 ---
 
-## 5. Runtime invariants and post-deploy health checks
+### 5. Runtime safety checks and post-deploy health checks
 
 After a self-edit, do not immediately declare success.
 
@@ -1396,7 +1396,7 @@ no forbidden capability expansion
 memory policy still valid
 ```
 
-DeepSeek Harness already has an architecture for package-owned runtime invariant companions over mutable state and event protocols.[@deepseekInvariants2026]
+DeepSeek Harness already has an architecture for package-owned runtime safety checks over mutable state and event protocols.[@deepseekInvariants2026]
 
 A self-edit security layer could extend this idea:
 
@@ -1419,13 +1419,13 @@ commit        rollback + quarantine
 
 ---
 
-## The Guarantees We Actually Want
+## The Safety Rules We Actually Want
 
 "Memory stays" is not a useful enough guarantee.
 
 A self-learning, self-editing harness needs several distinct properties.
 
-## Guarantee 1: Runtime recovery
+### Safety rule 1: Runtime recovery
 
 For a managed reversible effect:
 
@@ -1439,7 +1439,7 @@ This is the kind of property temporal composability is concerned with.
 
 ---
 
-## Guarantee 2: Learning persistence
+### Safety rule 2: Keep approved learning
 
 Once an authorised learning transaction is committed:
 
@@ -1459,7 +1459,7 @@ The learning survived because it has a different owner and lifecycle.
 
 ---
 
-## Guarantee 3: Provenance integrity
+### Safety rule 3: Know where learning came from
 
 Every committed knowledge item must be traceable to:
 
@@ -1473,11 +1473,11 @@ policy version
 commit revision
 ```
 
-If provenance cannot be verified, the memory should not be considered fully trusted.
+If the source cannot be checked, the memory should not be treated as fully trusted.
 
 ---
 
-## Guarantee 4: Audit monotonicity
+### Safety rule 4: Audit history only grows
 
 The security log should be append-only.
 
@@ -1508,7 +1508,7 @@ but should not be able to erase the fact that those events occurred.
 
 ---
 
-## Guarantee 5: Causal quarantine
+### Safety rule 5: Isolate learning from revoked versions
 
 If version $v$ is revoked, knowledge derived exclusively from $v$ should no longer influence future action unless independently revalidated.
 
@@ -1526,9 +1526,9 @@ rather than only the first half.
 
 ---
 
-## Guarantee 6: Rollback target immutability
+### Safety rule 6: Rollback targets cannot change
 
-A rollback should restore an immutable known-good artifact.
+A rollback should restore a fixed, known-good artifact.
 
 ```text
 rollback_target = sha256:abc...
@@ -1544,7 +1544,7 @@ that the self-editing system can overwrite.
 
 ---
 
-## Guarantee 7: Atomic publication
+### Safety rule 7: Publish changes as one step
 
 A new component version should move from:
 
@@ -1555,18 +1555,18 @@ candidate
 to:
 
 ```text
-authoritative
+approved
 ```
 
 only after its required checks pass.
 
-This resembles a publication boundary in session preparation: an exact prepared Session is owned privately until successful publication or rollback, with revision validation preventing stale state from being associated with a newer durable revision.
+This resembles a publication boundary in session preparation: a prepared session is kept private until it is successfully published or rolled back, with revision checks preventing stale state from being attached to a newer durable revision.
 
 The same style of thinking can be applied to self-edits.
 
 ---
 
-## A Stronger Architecture for a Self-Learning Harness
+## A Safer Design for a Self-Learning Harness
 
 Putting these ideas together:
 
@@ -1627,7 +1627,7 @@ Those belong to a higher-trust control plane.
 
 ---
 
-## The Three-Plane Model
+## Three Separate Areas
 
 <div class="responsive-diagram" role="img" aria-label="Three planes with different persistence rules: security governs runtime, runtime proposes learning, and knowledge stores validated durable learning.">
 <svg viewBox="0 0 820 500" xmlns="http://www.w3.org/2000/svg" aria-labelledby="part-five-planes-title part-five-planes-desc">
@@ -1642,7 +1642,7 @@ Those belong to a higher-trust control plane.
   <text class="diagram-label" x="120" y="230">RUNTIME PLANE</text>
   <text class="diagram-muted" x="120" y="260">plugins · tools · providers · reversible effects</text>
   <text class="diagram-label" x="120" y="366">KNOWLEDGE PLANE</text>
-  <text class="diagram-muted" x="120" y="396">validated memory · provenance · revocable learning</text>
+  <text class="diagram-muted" x="120" y="396">validated memory · source history · revocable learning</text>
   <defs><marker id="plane-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="var(--site-accent)"/></marker></defs>
   <path class="diagram-line" d="M410 162 V198" marker-end="url(#plane-arrow)"/>
   <path class="diagram-line" d="M410 298 V334" marker-end="url(#plane-arrow)"/>
@@ -1690,7 +1690,7 @@ I think this is the cleanest extension of the paper for agent infrastructure.
 │ task strategies                             │
 │                                             │
 │ EXPECTED PROPERTY: durable, versioned,       │
-│ provenance-aware, revocable/quarantinable   │
+│ traceable, revocable or isolatable           │
 └─────────────────────────────────────────────┘
 ```
 
@@ -1700,13 +1700,13 @@ The knowledge plane wants to remember validated history.
 
 The security plane wants to remember **all security-relevant history**, including failures and rollbacks.
 
-Those are three different semantics.
+Those are three different sets of rules.
 
 Trying to make one rollback mechanism serve all three is likely to create contradictions.
 
 ---
 
-## The Deeper Research Question
+## The Bigger Research Question
 
 The Cordis paper gives us a strong vocabulary for dynamic runtime composition.
 
@@ -1715,43 +1715,43 @@ But a self-learning harness creates another axis:
 ```text
 spatial   → what do I depend on?
 temporal  → what effects belong to my lifetime?
-epistemic → what knowledge should survive my lifetime?
+learning → what knowledge should survive my lifetime?
 security  → who is allowed to decide what survives?
 ```
 
 That suggests a useful future extension:
 
-> **Spatiotemporal composability tells us how software components can come and go cleanly. A self-learning harness additionally needs a theory of authorised persistent knowledge.**
+> **Spatiotemporal composability tells us how software components can come and go cleanly. A self-learning harness also needs a way to decide which learned knowledge is allowed to persist.**
 
-The important property would not be full confluence over all state.
+The important property would not be the same result for every kind of state.
 
 It might be something closer to:
 
-### Structural confluence
+### Same structure, same result
 
 The runtime converges according to the final component composition.
 
-### Epistemic continuity
+### Learned memory continues
 
 Authorised committed learning survives runtime replacement.
 
-### Provenance safety
+### Know where memory came from
 
-Every learned state transition is attributable to an immutable source identity and evidence trail.
+Every learned state transition can be linked to an unchanging source and evidence trail.
 
-### Causal revocation
+### Revoke knowledge by cause
 
 Knowledge derived from a revoked component can be quarantined or revalidated.
 
-### Recovery integrity
+### Recovery still works
 
 The mechanism that restores a previous version cannot itself be rewritten by the version being evaluated.
 
-Together, those properties begin to answer the concern that simple persistent memory cannot.
+Together, those properties begin to address the problem that simple persistent memory cannot solve.
 
 ---
 
-## A Final Worked Scenario
+## Example: Updating an MCP Router
 
 Suppose Agent Harness v12 decides to improve its MCP router.
 
@@ -1850,7 +1850,7 @@ The first prevents meaningful learning.
 
 The second preserves contamination.
 
-A provenance-aware system can decide based on causal trust.
+A system that tracks where knowledge came from can decide whether its source is still trusted.
 
 ---
 
@@ -1871,7 +1871,7 @@ Who owns durable learning?
 
 Who validates it?
 
-How is provenance recorded?
+How do we record where it came from?
 
 Can a rolled-back component's memories still influence behaviour?
 
@@ -1901,7 +1901,7 @@ self-edit
 +
 revertible runtime effects
 +
-immutable versioned artifacts
+fixed, versioned artifacts
 +
 write-ahead recovery metadata
 +
@@ -1909,11 +1909,11 @@ independent recovery authority
 +
 versioned persistent memory
 +
-provenance
+source history
 +
-runtime invariants
+runtime safety checks
 +
-causal quarantine
+source-based quarantine
 +
 append-only audit
 ```

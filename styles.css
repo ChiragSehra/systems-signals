@@ -46,7 +46,13 @@ body { background: var(--site-paper); color: var(--site-ink); font-family: var(-
 .navbar-nav .nav-link { padding-inline: .75rem !important; }
 .navbar-brand { font-family: var(--site-display); font-weight: 700; letter-spacing: -.03em; }
 .navbar-brand, .navbar .nav-link, .quarto-navbar-tools, .quarto-navbar-tools button, .aa-DetachedSearchButton { color: var(--site-ink) !important; }
+.aa-DetachedSearchButton .aa-DetachedSearchButtonIcon,
+.aa-DetachedSearchButton .aa-DetachedSearchButtonIcon svg,
+.aa-DetachedSearchButton .aa-DetachedSearchButtonIcon svg path { color: var(--site-ink) !important; fill: currentColor; stroke: currentColor; }
 .navbar .nav-link:hover, .navbar-brand:hover, .aa-DetachedSearchButton:hover { color: var(--site-accent) !important; }
+.aa-DetachedSearchButton:hover .aa-DetachedSearchButtonIcon,
+.aa-DetachedSearchButton:hover .aa-DetachedSearchButtonIcon svg,
+.aa-DetachedSearchButton:hover .aa-DetachedSearchButtonIcon svg path { color: var(--site-accent) !important; }
 .navbar-nav .nav-link { font-size: .86rem; letter-spacing: .02em; }
 main.content, #quarto-content { max-width: 1360px; margin-inline: auto; }
 #quarto-content { padding-inline: clamp(1rem, 4vw, 3rem); }

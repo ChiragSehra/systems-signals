@@ -1,5 +1,5 @@
 ---
-title: "Revertible Effects — Making Runtime Changes Undoable"
+title: "Revertible Effects: Making Runtime Changes Undoable"
 description: "How effect scopes, inverse operations, and nested lifetimes make runtime changes recoverable."
 date: 2026-08-17
 author: "Chirag Sehra"
@@ -117,7 +117,7 @@ The inverse must actually recover the pre-effect state under the definition's as
 
 ---
 
-## Worked Example: Our First Effect Runtime
+## Example: Our First Effect Runtime
 
 ```python
 class EffectScope:
@@ -215,7 +215,7 @@ So teardown should normally be:
 1. unregister service
 ```
 
-This is LIFO behaviour.
+This is last-in, first-out (LIFO) cleanup.
 
 The intuition is the familiar inverse-composition law:
 
@@ -341,7 +341,7 @@ The paper therefore studies the conditions under which effects from different co
 
 ---
 
-## Concrete Interleaving Example
+## Example: Interleaved Effects
 
 Start with:
 
@@ -416,7 +416,7 @@ The relationships among effects matter.
 
 ---
 
-## OS Analogy: Driver Cleanup
+## Relatable Example: Driver Cleanup
 
 Kernel modules and drivers commonly have paired setup and cleanup operations.[@linuxDriverBasics]
 
@@ -444,9 +444,9 @@ effect(register_c)
 
 where each registration yields or carries the corresponding recovery action.
 
-### Where the analogy breaks
+### Limits of the Comparison
 
-Kernel cleanup APIs do not make arbitrary shared-state mutations mathematically independent.
+Kernel cleanup APIs do not make arbitrary shared-state mutations independent in the way this model requires.
 
 A process may write a file.
 
@@ -525,4 +525,4 @@ This does not reproduce Cordis exactly, but it teaches the lifecycle property we
 
 ---
 
-[Previous: Why Dynamic AI Systems Break in Two Different Directions](../part-1-dynamic-ai-systems/index.qmd) · [Next: Reactive Coeffects — Dependencies That Control Component Lifetime](../part-3-reactive-coeffects/index.qmd)
+[Previous: Why Dynamic AI Systems Break in Two Different Directions](../part-1-dynamic-ai-systems/index.qmd) · [Next: Reactive Coeffects: Dependencies That Control Component Lifetime](../part-3-reactive-coeffects/index.qmd)

@@ -1,4 +1,4 @@
-# Technical Writing Site — Project Brief
+# Technical Writing Site: Project Brief
 
 ## Purpose
 
