@@ -81,9 +81,11 @@ main.content > h1, #quarto-content > .quarto-title-block { margin-top: clamp(3re
 .quarto-title-meta { color: var(--site-muted); }
 .quarto-listing { margin-top: 2rem; }
 .quarto-listing .listing-item { padding: 1.4rem 0; border-top: 1px solid var(--site-line); }
-.quarto-listing .listing-title { font-family: var(--site-display); font-size: 1.55rem; font-weight: 700; }
+.quarto-listing .listing-title, .quarto-listing .listing-title a { color: var(--site-ink) !important; font-family: var(--site-display); font-size: 1.55rem; font-weight: 700; }
+.quarto-listing .listing-title a:hover { color: var(--site-accent) !important; }
 .quarto-listing .listing-description { color: var(--site-muted); max-width: 700px; }
-.quarto-listing .listing-date, .quarto-listing .listing-categories { color: var(--site-muted); font-size: .8rem; }
+html[data-theme="dark"] .quarto-listing .listing-description { color: var(--site-ink) !important; }
+.quarto-listing .listing-date, .quarto-listing .listing-categories, .quarto-listing .listing-categories a { color: var(--site-muted) !important; font-size: .8rem; }
 .page-columns .content { max-width: 68ch; }
 .page-columns .content p, .page-columns .content li { font-size: 1.04rem; }
 #quarto-content.page-layout-article .content pre, #quarto-content.page-layout-article .content .sourceCode { box-sizing: border-box; max-width: 100%; overflow-x: auto; }

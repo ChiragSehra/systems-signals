@@ -8,7 +8,7 @@
   const button = document.querySelector('.theme-toggle');
   const nav = document.querySelector('.navbar .quarto-navbar-tools') || document.querySelector('.navbar .container-fluid') || document.querySelector('.navbar .navbar-nav:last-child');
   const storedTheme = window.localStorage.getItem('systems-signals-theme');
-  const systemTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  const defaultTheme = 'light';
   const setTheme = (theme) => {
     root.dataset.theme = theme;
     const dark = theme === 'dark';
@@ -20,7 +20,7 @@
     button.querySelector('.theme-toggle-label').textContent = dark ? 'Light mode' : 'Dark mode';
   };
   if (nav) nav.appendChild(button);
-  setTheme(storedTheme || systemTheme);
+  setTheme(storedTheme || defaultTheme);
   button.addEventListener('click', () => {
     const nextTheme = root.dataset.theme === 'dark' ? 'light' : 'dark';
     window.localStorage.setItem('systems-signals-theme', nextTheme);
